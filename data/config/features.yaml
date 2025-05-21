@@ -1,0 +1,35 @@
+features:
+  - id: RIDAGEYR
+    name: age
+    type: numeric
+    missing_codes: [777, 999]
+
+  - id: RIAGENDR
+    name: sex
+    type: categorical
+    categories:
+      1: Male
+      2: Female
+    missing_codes: [7, 9]
+
+  - id: RIDRETH1
+    name: race_ethnicity
+    type: categorical
+    categories:
+      1: Mexican American
+      2: Other Hispanic
+      3: Non-Hispanic White
+      4: Non-Hispanic Black
+      5: Other Race
+    missing_codes: [7, 9]
+
+  - id: INDFMPIR
+    name: poverty_income_ratio
+    type: numeric
+    missing_codes: [777, 999]
+
+  - id: LBXTR
+    name: triglycerides
+    type: numeric
+    missing_codes: [777, 888, 999]
+
