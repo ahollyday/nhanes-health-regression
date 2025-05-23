@@ -16,20 +16,31 @@ from scipy.stats import randint, uniform
 # === Load preprocessed data ===
 npz = np.load("../data/processed/train_test_data.npz", allow_pickle=True)
 X_train = npz["X_train"]
-X_test = npz["X_test"]
 y_train = pd.DataFrame(npz["y_train"])
-y_test = pd.DataFrame(npz["y_test"])
-feature_names = npz["feature_names"]
 
 # === Load target names dynamically ===
-def load_target_names():
+def load_feature_config():
     with open("../data/config/features.yaml", "r") as f:
-        features = yaml.safe_load(f)["features"]
+        return yaml.safe_load(f)["features"]
+
+def load_target_names():
+    features = load_feature_config()
     return [f["name"] for f in features if f["role"] == "target"]
 
+def get_log_transform_targets():
+    features = load_feature_config()
+    return [f["name"] for f in features if f.get("log_transform") and f["role"] == "target"]
+
+def inverse_log_transform(arr, columns):
+    df = pd.DataFrame(arr, columns=target_names)
+    for col in columns:
+        if col in df.columns:
+            df[col] = np.expm1(df[col])
+    return df
+
 target_names = load_target_names()
+log_targets = get_log_transform_targets()
 y_train.columns = target_names
-y_test.columns = target_names
 
 # === Define models and parameter distributions ===
 model_specs = {
@@ -56,7 +67,7 @@ model_specs = {
     "KNN": {
         "model": MultiOutputRegressor(KNeighborsRegressor()),
         "params": {
-            "estimator__n_neighbors": randint(3, 20),
+            "estimator__n_neighbors": randint(5, 30),
             "estimator__weights": ["uniform", "distance"]
         }
     },
@@ -75,47 +86,53 @@ residuals = []
 model_dir = "../models"
 os.makedirs(model_dir, exist_ok=True)
 
-for name, spec in model_specs.items():
-    print(f"\n🚀 Training model: {name}")
-    model = spec["model"]
-    params = spec.get("params")
+with open("../models/best_models.txt", "w") as f:
+    for name, spec in model_specs.items():
+        print(f"\n🚀 Training model: {name}")
+        model = spec["model"]
+        params = spec.get("params")
 
-    if params:
-        clf = RandomizedSearchCV(model, params, n_iter=25, cv=3, scoring="r2", verbose=1, n_jobs=-1, random_state=42)
-        clf.fit(X_train, y_train)
-        best_model = clf.best_estimator_
-    else:
-        model.fit(X_train, y_train)
-        best_model = model
+        if params:
+            clf = RandomizedSearchCV(model, params, n_iter=25, cv=3, scoring="r2", verbose=1, n_jobs=-1, random_state=42)
+            clf.fit(X_train, y_train)
+            best_model = clf.best_estimator_
+        else:
+            model.fit(X_train, y_train)
+            best_model = model
 
-    for split, X, y_true in [("train", X_train, y_train), ("test", X_test, y_test)]:
-        y_pred = best_model.predict(X)
-        r2 = r2_score(y_true, y_pred, multioutput='raw_values')
-        rmse = np.sqrt(mean_squared_error(y_true, y_pred, multioutput='raw_values'))
+        y_pred = best_model.predict(X_train)
+        y_pred_df = inverse_log_transform(y_pred, log_targets)
+        y_true_df = inverse_log_transform(y_train.values, log_targets)
+
+        r2 = r2_score(y_true_df, y_pred_df, multioutput='raw_values')
+        rmse = np.sqrt(mean_squared_error(y_true_df, y_pred_df, multioutput='raw_values'))
 
         results.append({
             "Model": name,
-            "Split": split,
             **{f"R2 - {target_names[i]}": r2[i] for i in range(len(target_names))},
             **{f"RMSE - {target_names[i]}": rmse[i] for i in range(len(target_names))}
         })
 
+        print(f"📈 Mean R² across targets: {np.mean(r2):.3f}")
+
         for i, target in enumerate(target_names):
             residuals.append(pd.DataFrame({
                 "Model": name,
-                "Split": split,
                 "Target": target,
-                "Residual": y_true.iloc[:, i] - y_pred[:, i]
+                "Residual": y_true_df.iloc[:, i] - y_pred_df.iloc[:, i]
             }))
 
-    joblib.dump(best_model, os.path.join(model_dir, f"{name.replace(' ', '_').lower()}.pkl"))
-    print(f"✅ Saved model to {model_dir}/{name.replace(' ', '_').lower()}.pkl")
+        model_path = os.path.join(model_dir, f"{name.replace(' ', '_').lower()}.pkl")
+        joblib.dump(best_model, model_path)
+        f.write(f"{os.path.basename(model_path)}\n")
+        print(f"✅ Saved model to {model_path}")
 
+# === Save results ===
 results_df = pd.DataFrame(results)
-results_df.to_csv("../summaries/model_metrics.csv", index=False)
-print("\n📊 Saved model performance summary to ../summaries/model_metrics.csv")
+results_df.to_csv("../summaries/train_metrics.csv", index=False)
+print("📊 Saved training metrics to ../summaries/train_metrics.csv")
 
 residuals_df = pd.concat(residuals, ignore_index=True)
-residuals_df.to_csv("../summaries/residuals.csv", index=False)
-print("📉 Saved residuals to ../summaries/residuals.csv")
+residuals_df.to_csv("../summaries/train_residuals.csv", index=False)
+print("📉 Saved training residuals to ../summaries/train_residuals.csv")
 

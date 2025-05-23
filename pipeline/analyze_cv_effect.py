@@ -1,29 +1,13 @@
-import pandas as pd
 import numpy as np
-import os
-import yaml
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import cross_val_score
-from sklearn.multioutput import MultiOutputRegressor
-from sklearn.metrics import make_scorer, r2_score, mean_squared_error
+import os
 from joblib import load
+from sklearn.model_selection import cross_val_score
+from sklearn.metrics import mean_squared_error
 
-# === Load data ===
-npz = np.load("../data/processed/train_test_data.npz", allow_pickle=True)
-X = pd.DataFrame(np.concatenate([npz["X_train"], npz["X_test"]], axis=0))
-y = pd.DataFrame(np.vstack([npz["y_train"], npz["y_test"]]))
-
-# === Load target names ===
-def load_target_names():
-    with open("../data/config/features.yaml", "r") as f:
-        features = yaml.safe_load(f)["features"]
-    return [f["name"] for f in features if f["role"] == "target"]
-
-target_names = load_target_names()
-y.columns = target_names
-
-# === Load best model per name ===
+# === Load models
 model_dir = "../models"
 model_files = [f for f in os.listdir(model_dir) if f.endswith(".pkl")]
 model_specs = {}
@@ -33,57 +17,54 @@ for f in model_files:
         name = "Baseline Linear Model"
     model_specs[name] = load(os.path.join(model_dir, f))
 
-# === Evaluation ===
-cv_values = [2, 3, 5, 7, 10, 20]
-cv_results = []
+# === Load data
+data = np.load("../data/processed/train_test_data.npz", allow_pickle=True)
+X_train = data["X_train"]
+y_train = data["y_train"]
+
+# === Cross-validation analysis
+folds = [2, 3, 5, 7, 10, 15, 20]
+results = []
 
 for name, model in model_specs.items():
     print(f"\n🔍 Evaluating CV effect for: {name}")
-    for cv in cv_values:
-        r2_scores = cross_val_score(model, X, y, cv=cv, scoring="r2", n_jobs=-1)
-        rmse_scores = cross_val_score(
-            model, X, y,
-            cv=cv,
-            scoring=make_scorer(lambda yt, yp: np.sqrt(mean_squared_error(yt, yp))),
-            n_jobs=-1
-        )
-
-        cv_results.append({
+    for cv in folds:
+        r2_scores = cross_val_score(model, X_train, y_train, cv=cv, scoring="r2", n_jobs=-1)
+        rmse_scores = np.sqrt(-cross_val_score(model, X_train, y_train, cv=cv, scoring="neg_mean_squared_error", n_jobs=-1))
+        results.append({
             "Model": name,
-            "CV Folds": cv,
-            "Mean R2": np.mean(r2_scores),
-            "Std R2": np.std(r2_scores),
-            "Mean RMSE": np.mean(rmse_scores),
-            "Std RMSE": np.std(rmse_scores)
+            "CV": cv,
+            "R2 Mean": np.mean(r2_scores),
+            "R2 Std": np.std(r2_scores),
+            "RMSE Mean": np.mean(rmse_scores),
+            "RMSE Std": np.std(rmse_scores)
         })
 
-# === Save results ===
-cv_results_df = pd.DataFrame(cv_results)
-os.makedirs("../summaries", exist_ok=True)
-cv_results_df.to_csv("../summaries/cv_sweep_results.csv", index=False)
-print("\n📈 Saved CV sweep results to ../summaries/cv_sweep_results.csv")
+# === Save results
+df = pd.DataFrame(results)
 
-# === Plotting ===
+# === Plot
 sns.set(style="white")
-fig, axes = plt.subplots(1, 2, figsize=(14, 6), dpi=300)
-lineplot_r2 = sns.lineplot(data=cv_results_df, x="CV Folds", y="Mean R2", hue="Model", marker="o", ax=axes[0])
 
-axes[0].set_ylabel("Mean R²")
-axes[0].set_xlabel("Number of CV Folds")
-axes[0].grid(False)
+fig, axes = plt.subplots(1, 2, figsize=(12, 4), dpi=300)
+r2_ax, rmse_ax = axes
 
-sns.lineplot(data=cv_results_df, x="CV Folds", y="Mean RMSE", hue="Model", marker="o", ax=axes[1], legend=False)
+# R² plot
+sns.lineplot(data=df, x="CV", y="R2 Mean", hue="Model", marker="o", ax=r2_ax)
+r2_ax.set_ylabel("Mean R²")
+r2_ax.set_xlabel("Number of CV Folds")
 
-axes[1].set_ylabel("Mean RMSE")
-axes[1].set_xlabel("Number of CV Folds")
-axes[1].grid(False)
+# RMSE plot
+sns.lineplot(data=df, x="CV", y="RMSE Mean", hue="Model", marker="o", ax=rmse_ax)
+rmse_ax.set_ylabel("Mean RMSE")
+rmse_ax.set_xlabel("Number of CV Folds")
 
-# Shared legend
-handles, labels = lineplot_r2.get_legend_handles_labels()
-fig.legend(handles, labels, title="Model", loc="upper center", bbox_to_anchor=(0.5, -0.05), ncol=3, frameon=True)
+# Move legend to one plot only
+r2_ax.legend(title="Model", fontsize=8)
+rmse_ax.get_legend().remove()
 
-plt.tight_layout(rect=[0, 0.05, 1, 1])
-plt.savefig("../figures/cv_sweep_summary.png", dpi=300)
-print("📊 Saved CV sweep plot to ../figures/cv_sweep_summary.png")
-# plt.show()  # Disabled to avoid popup
+plt.tight_layout()
+os.makedirs("../figures/evaluation", exist_ok=True)
+plt.savefig("../figures/evaluation/cv_fold_analysis.png", dpi=300)
+print("📊 Saved CV analysis plot to ../figures/evaluation/cv_fold_analysis.png")
 

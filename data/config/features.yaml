@@ -80,7 +80,7 @@ features:
     type: numeric
     role: target
     drop_extrema: true
-    log_transform: false
+    log_transform: true
     unit: mg/dL
 
   - name: monthly_family_income
