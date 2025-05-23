@@ -1,6 +1,6 @@
-# NHANES Machine Learning Pipeline
+# NHANES Health Regression Pipeline
 
-This project builds a reproducible machine learning pipeline to model and predict health outcomes using the NHANES dataset. It supports end-to-end tasks: loading, cleaning, preprocessing, training, evaluation, and reporting.
+This project builds a reproducible machine learning pipeline to model health outcomes from the NHANES dataset using multi-output regression. It includes automated data cleaning, feature engineering, model training, evaluation, and residual diagnostics.
 
 ---
 
@@ -8,165 +8,109 @@ This project builds a reproducible machine learning pipeline to model and predic
 
 ```
 ├── data/
-│   ├── raw/                      # NHANES XPT data files
-│   ├── processed/                # Cleaned + preprocessed datasets
-│   ├── input/                    # New rows for prediction
+│   ├── raw/                     # Original NHANES .xpt files
+│   ├── processed/               # Cleaned CSV + train/test arrays
+│   ├── input/                   # Optional: custom inputs for prediction
 │   └── config/
-│       └── features.yaml         # Feature definitions and metadata
+│       └── features.yaml        # Feature metadata + modeling flags
 │
-├── models/                       # Saved trained models
-├── summaries/                    # Metrics, residuals, feature importances
-├── figures/                      # Saved plots for reporting
-├── predictions/                  # Predictions for new input
+├── models/                      # Saved trained models (.pkl)
+├── summaries/                   # Training/testing metrics & residuals
+├── figures/
+│   ├── eda/                     # Exploratory plots
+│   └── evaluation/              # Final evaluation plots
 │
-├── load_clean.py                # Merges, renames, cleans raw data
-├── summarize_data.py            # Missingness + EDA summaries
-├── preprocess_model_data.py     # Preprocessing and train/test split
-├── train_models.py              # Model training and tuning
-├── evaluate_models.py           # R², RMSE, residuals
-├── feature_importance.py        # Tree-based importance extraction
-├── generate_figures.py          # Summary plots and charts
-├── predict.py                   # Run model on new input
-├── run_pipeline.py              # Run full pipeline in sequence
-└── README.md                    # Project documentation
+├── pipeline/
+│   ├── load_clean.py            # Merges + cleans NHANES raw data
+│   ├── summarize_data.py        # Summary stats, histograms, correlation
+│   ├── preprocess_model_data.py # Imputation, encoding, scaling, splitting
+│   ├── train_models.py          # Trains & tunes ML models + residuals
+│   ├── test_models.py           # Loads models, evaluates on test set
+│   ├── evaluate_models.py       # Aggregates plots & CV effect
+│   └── clean_project.py         # Safely deletes intermediate outputs
 ```
 
 ---
 
-## 🔁 Pipeline Workflow
+## 🚀 Pipeline Overview
 
-Run the full pipeline:
-
-```bash
-python run_pipeline.py
-```
-
-Or step-by-step:
+Run each stage in order:
 
 ```bash
 python load_clean.py
 python summarize_data.py
 python preprocess_model_data.py
 python train_models.py
+python test_models.py
 python evaluate_models.py
-python feature_importance.py
-python generate_figures.py
 ```
 
 ---
 
-## ⚙️ `load_clean.py` – Data Cleaning
+## 🧼 Data Cleaning
 
-This script prepares raw NHANES data for modeling. It performs:
-
-1. Feature selection via `features.yaml`
-2. Merge of multiple `.xpt.txt` files on `SEQN`
-3. Renaming to human-readable feature names
-4. Invalid value replacement (e.g., 7, 9, 777 → `pd.NA`)
-5. Extrema filtering for numeric features
-6. Categorical mapping (e.g., `1 → Male`)
-7. Dropping rows with missing target values, required for multi-output models
-8. CSV export to `data/processed/clean_data.csv`
+- Feature selection via `features.yaml`
+- Merging multiple NHANES .xpt files on `SEQN`
+- Renaming columns
+- Replacing special codes (e.g., 777, 999) with `NaN`
+- Dropping extrema (if flagged)
+- Dropping rows with missing targets
 
 ---
 
-## 📊 `summarize_data.py` – Data Exploration
+## 📊 Models Trained
 
-This script provides:
-
-- Missing value counts and percentages
-- Descriptive stats for numeric features
-- Value counts for categorical features
-
-Ideal for pre-modeling checks and understanding data quality.
-
----
-
-## 📄 `features.yaml` – Feature Configuration
-
-Located in `data/config/`, this file controls:
-
-- Feature names, types, and sources
-- Role in modeling (`feature` or `target`)
-- Optional extrema filtering (`drop_extrema: true`)
-- Optional value mappings
-
-Example:
-
-```yaml
-- name: sex
-  source: RIAGENDR
-  file: DEMO_I
-  type: categorical
-  role: feature
-  map:
-    1: "Male"
-    2: "Female"
-```
-
----
-
-## 📈 Models Supported
-
+Multi-output regressors:
+- **Linear Regression (baseline)**
 - Random Forest
 - Gradient Boosting
-- K-Nearest Neighbors (KNN)
-- Ridge Regression
-- Support Vector Regression (SVR)
-
-All models use a `Pipeline` with preprocessing (scaling, encoding) and support multi-output regression (predicting multiple targets simultaneously).
+- K-Nearest Neighbors
+- Support Vector Regression
 
 ---
 
-## 📤 Outputs
+## 📈 Outputs
 
-- `summaries/metrics.csv` – R² and RMSE per model and target
-- `summaries/residuals.csv` – prediction residuals
-- `summaries/feature_importances.csv` – tree-based importances
-- `figures/` – plots of model performance and residuals
-- `predictions/predictions.csv` – predictions for new data
+- `train_metrics.csv` / `test_metrics.csv`: R² / RMSE by model and target
+- `train_residuals.csv` / `test_residuals.csv`: Model residuals
+- `train_test_metrics_scatter.png`: Compare train/test generalization
+- `train_residuals_overlay.png`, `test_residuals_overlay.png`: Residual histograms
+- `cv_fold_analysis.png`: R² / RMSE vs CV folds
 
 ---
 
-## 🧠 Example: Predict on New Data
+## ⚙️ Feature Configuration
 
-Update `data/input/input.csv`, then run:
-
-```bash
-python predict.py
+```yaml
+- name: triglycerides
+  source: LBXTR
+  file: TRIGLY_I
+  type: numeric
+  role: target
+  drop_extrema: true
+  log_transform: true
+  unit: mg/dL
 ```
 
-Predictions will be saved to `predictions/predictions.csv`.
+Supports:
+- `drop_extrema`
+- `log_transform`
+- `unit`
+- `role: feature` or `target`
 
 ---
 
-## ✅ Requirements
-
-- Python 3.8+
-- Packages: `pandas`, `numpy`, `scikit-learn`, `pyreadstat`, `pyyaml`, `matplotlib`, `seaborn`, `joblib`
-
-Install via:
+## 🧼 Clean Intermediate Files
 
 ```bash
-pip install -r requirements.txt
+python clean_project.py
 ```
 
 ---
 
-## 🧭 Next Steps
+## ✨ Author
 
-- Add Tableau dashboard from `summaries/` and `figures/`
-- Extend to additional NHANES cycles
-- Package into a Streamlit app or lightweight API
+Andrew Hollyday  
+Ph.D. in Geophysics, Columbia University
 
----
-
-## 📇 License
-
-MIT License — free to use, modify, and share.
-
----
-
-## 👤 Author
-
-[Your Name Here]
+MIT License
