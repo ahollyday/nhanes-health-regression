@@ -3,3 +3,4 @@ random_forest.pkl
 gradient_boosting.pkl
 knn.pkl
 svr.pkl
+xgboost.pkl

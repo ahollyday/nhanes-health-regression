@@ -3,102 +3,123 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-import yaml
 import joblib
+import yaml
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import cross_val_score
-from matplotlib.lines import Line2D
+import matplotlib.patches as mpatches
 
-# === Load data and config ===
+# === Load config ===
+def load_feature_config():
+    with open("../data/config/features.yaml", "r") as f:
+        return yaml.safe_load(f)["features"]
+
+features = load_feature_config()
+target_names = [f["name"] for f in features if f["role"] == "target"]
+target_units = {f["name"]: f.get("unit", "") for f in features if f["role"] == "target"}
+target_display_names = {f["name"]: f.get("display_name", f["name"]) for f in features if f["role"] == "target"}
+
+# === Standardize model names ===
+def standardize_model_name(name):
+    name = name.strip().lower()
+    if name == "linear regression":
+        return "Baseline Linear Model"
+    return name.title()
+
+# === Load metrics and residuals ===
 train_metrics = pd.read_csv("../summaries/train_metrics.csv")
 test_metrics = pd.read_csv("../summaries/test_metrics.csv")
-train_residuals = pd.read_csv("../summaries/train_residuals.csv")
-test_residuals = pd.read_csv("../summaries/test_residuals.csv")
+train_res = pd.read_csv("../summaries/train_residuals.csv")
+test_res = pd.read_csv("../summaries/test_residuals.csv")
 
-with open("../data/config/features.yaml", "r") as f:
-    features = yaml.safe_load(f)["features"]
+for df in [train_metrics, test_metrics, train_res, test_res]:
+    df["Model"] = df["Model"].apply(standardize_model_name)
 
-targets = [f["name"] for f in features if f["role"] == "target"]
-target_units = {f["name"]: f.get("unit", "") for f in features if f["role"] == "target"}
-log_targets = [f["name"] for f in features if f.get("log_transform")]
+# === Parse metrics ===
+def extract_metric(df, metric):
+    return df.filter(like=metric).set_index(df["Model"])
 
-# === Plot scatter of Train vs Test metrics (R2 and RMSE) ===
-metrics = ["R2", "RMSE"]
-fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+r2_train = extract_metric(train_metrics, "R2")
+r2_test = extract_metric(test_metrics, "R2")
+rmse_train = extract_metric(train_metrics, "RMSE")
+rmse_test = extract_metric(test_metrics, "RMSE")
 
-colors = sns.color_palette(n_colors=len(train_metrics))
+# === Define consistent tab10 color palette ===
+all_models = sorted(set(train_metrics["Model"]) | set(test_metrics["Model"]) |
+                    set(train_res["Model"]) | set(test_res["Model"]))
+palette = sns.color_palette("tab10", n_colors=len(all_models))
+model_colors = dict(zip(all_models, palette))
 
-legend_elements = []
-for i, metric in enumerate(metrics):
-    ax = axes[i]
-    train_cols = [col for col in train_metrics.columns if col.startswith(metric)]
-    test_cols = [col for col in test_metrics.columns if col.startswith(metric)]
+# === Plot R^2 and RMSE comparison ===
+sns.set(style="white")
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), dpi=300)
 
-    for j, model in enumerate(train_metrics["Model"]):
-        train_values = train_metrics.loc[j, train_cols].values
-        test_values = test_metrics.loc[j, test_cols].values
-        mean_train = np.mean(train_values)
-        mean_test = np.mean(test_values)
-        ax.scatter(mean_train, mean_test, color=colors[j])
-        if i == 0:
-            legend_elements.append(Line2D([0], [0], marker='o', color='w', label=model,
-                                          markerfacecolor=colors[j], markersize=6))
+for (train_df, test_df, metric, ax) in [
+    (r2_train, r2_test, "R^2", axes[0]),
+    (rmse_train, rmse_test, "RMSE", axes[1])
+]:
+    models = train_df.index.tolist()
+    merged = pd.DataFrame({
+        "Train": train_df.mean(axis=1).values,
+        "Test": test_df.mean(axis=1).values,
+        "Model": models
+    })
 
-    ax.plot(ax.get_xlim(), ax.get_xlim(), ls="--", c="gray")
+    sns.scatterplot(
+        data=merged, x="Train", y="Test", hue="Model", ax=ax,
+        palette=model_colors, s=50, edgecolor='white')
+    min_val, max_val = merged[["Train", "Test"]].min().min(), merged[["Train", "Test"]].max().max()
+    ax.plot([min_val, max_val], [min_val, max_val], linestyle="--", color="gray")
     ax.set_xlabel(f"Train {metric}")
     ax.set_ylabel(f"Test {metric}")
     ax.grid(False)
 
-fig.legend(handles=legend_elements, loc='center right', frameon=False)
-plt.tight_layout(rect=[0, 0, 0.95, 1])
+axes[1].legend(title="Model", loc="upper left", bbox_to_anchor=(1.0, 1.0), frameon=False)
+axes[0].get_legend().remove()
+plt.tight_layout()
 os.makedirs("../figures/evaluation", exist_ok=True)
-plt.savefig("../figures/evaluation/train_test_metrics_scatter.png", dpi=300)
-print("✅ Saved train/test scatter comparison to ../figures/evaluation/train_test_metrics_scatter.png")
+plt.savefig("../figures/evaluation/train_test_metrics_comparison.png", dpi=300)
 
-# === Residual overlay plots ===
-def plot_residual_overlay(residual_df, split, out_path, title):
-    fig, axes = plt.subplots(1, len(targets), figsize=(6 * len(targets), 4))
-    if len(targets) == 1:
-        axes = [axes]
+# === Residual overlay ===
+def plot_residual_overlay(df, split):
+    g = sns.FacetGrid(df, col="Target", sharex=False, sharey=False, col_wrap=2, height=3.5, aspect=1.4)
+    g.map_dataframe(sns.histplot, x="Residual", hue="Model", palette=model_colors,
+                    element="step", stat="density", common_norm=False, fill=False, linewidth=1)
 
-    for i, target in enumerate(targets):
-        ax = axes[i]
-        for model_name in residual_df["Model"].unique():
-            subset = residual_df[(residual_df["Model"] == model_name) & (residual_df["Target"] == target)]
-            sns.histplot(subset["Residual"], kde=False, bins=50, ax=ax, label=model_name,
-                         element="step", fill=False)
-
-        ax.axvline(0, linestyle="--", color="black")
-        unit = f" ({target_units[target]})" if target_units[target] else ""
-        ax.set_xlabel(f"{target}{unit}")
-        ax.set_ylabel("Density")
+    for ax, target in zip(g.axes.flat, g.col_names):
+        ax.axvline(0, linestyle="--", color="gray", linewidth=1)
         ax.grid(False)
+        ax.set_ylabel("Density")
+        display_label = target_display_names.get(target, target)
+        unit = target_units.get(target, "")
+        ax.set_xlabel(f"{display_label} ({unit})" if unit else display_label)
 
-    fig.legend(handles=[Line2D([0], [0], color=sns.color_palette()[i], label=model)
-                        for i, model in enumerate(residual_df["Model"].unique())],
-               loc="lower center", ncol=5, frameon=False, bbox_to_anchor=(0.5, -0.02))
-    fig.suptitle(title, fontsize=14)
-    plt.tight_layout(rect=[0, 0.05, 1, 1])
-    plt.savefig(out_path, dpi=300)
-    print(f"✅ Saved {split} residuals overlay to {out_path}")
+    g.set_titles("{col_name}")
+    for ax in g.axes.flat:
+        if ax.get_legend():
+            ax.get_legend().remove()
 
-plot_residual_overlay(train_residuals, "Train", "../figures/evaluation/train_residuals_overlay.png", "Train Residuals")
-plot_residual_overlay(test_residuals, "Test", "../figures/evaluation/test_residuals_overlay.png", "Test Residuals")
+    handles = [mpatches.Patch(color=model_colors[m], label=m) for m in sorted(df["Model"].unique())]
+    g.fig.legend(handles, [h.get_label() for h in handles], title="Model",
+                 loc="lower center", bbox_to_anchor=(0.5, -0.15), ncol=3, frameon=False)
+    g.fig.subplots_adjust(top=0.88, bottom=0.28)
+    g.fig.suptitle(f"{split} Residuals", fontsize=14)
+    g.savefig(f"../figures/evaluation/{split.lower()}_residuals_overlay.png", dpi=300)
 
-# === CV analysis directly in script ===
-from joblib import load
+plot_residual_overlay(train_res, "Train")
+plot_residual_overlay(test_res, "Test")
+
+# === CV analysis ===
 model_dir = "../models"
 model_files = [f for f in os.listdir(model_dir) if f.endswith(".pkl")]
 model_specs = {}
 for f in model_files:
-    name = f.replace("_", " ").replace(".pkl", "").title()
-    if name == "Linear Regression":
-        name = "Baseline Linear Model"
-    model_specs[name] = load(os.path.join(model_dir, f))
+    name = standardize_model_name(f.replace("_", " ").replace(".pkl", ""))
+    model_specs[name] = joblib.load(os.path.join(model_dir, f))
 
-data = np.load("../data/processed/train_test_data.npz", allow_pickle=True)
-X_train = data["X_train"]
-y_train = data["y_train"]
+npz = np.load("../data/processed/train_test_data.npz", allow_pickle=True)
+X_train = npz["X_train"]
+y_train = npz["y_train"]
 
 folds = [2, 3, 5, 7, 10, 15, 20]
 results = []
@@ -117,22 +138,20 @@ for name, model in model_specs.items():
             "RMSE Std": np.std(rmse_scores)
         })
 
-df = pd.DataFrame(results)
+cv_df = pd.DataFrame(results)
+
 fig, axes = plt.subplots(1, 2, figsize=(12, 4), dpi=300)
-r2_ax, rmse_ax = axes
+sns.lineplot(data=cv_df, x="CV", y="R2 Mean", hue="Model", marker="o", ax=axes[0], palette=model_colors)
+axes[0].set_ylabel("Mean R²")
+axes[0].set_xlabel("Number of CV Folds")
+axes[0].grid(False)
 
-sns.lineplot(data=df, x="CV", y="R2 Mean", hue="Model", marker="o", ax=r2_ax)
-r2_ax.set_ylabel("Mean R²")
-r2_ax.set_xlabel("Number of CV Folds")
-r2_ax.grid(False)
-
-sns.lineplot(data=df, x="CV", y="RMSE Mean", hue="Model", marker="o", ax=rmse_ax)
-rmse_ax.set_ylabel("Mean RMSE")
-rmse_ax.set_xlabel("Number of CV Folds")
-rmse_ax.grid(False)
-
-r2_ax.legend(title="Model", fontsize=8)
-rmse_ax.get_legend().remove()
+sns.lineplot(data=cv_df, x="CV", y="RMSE Mean", hue="Model", marker="o", ax=axes[1], palette=model_colors)
+axes[1].set_ylabel("Mean RMSE")
+axes[1].set_xlabel("Number of CV Folds")
+axes[1].grid(False)
+axes[1].get_legend().remove()
+axes[0].legend(title="Model", fontsize=8)
 
 plt.tight_layout()
 plt.savefig("../figures/evaluation/cv_fold_analysis.png", dpi=300)

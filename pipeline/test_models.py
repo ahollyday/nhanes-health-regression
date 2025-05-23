@@ -4,6 +4,7 @@ import joblib
 import os
 import yaml
 from sklearn.metrics import r2_score, mean_squared_error
+from xgboost import XGBRegressor
 
 # === Load test data ===
 npz = np.load("../data/processed/train_test_data.npz", allow_pickle=True)

@@ -12,6 +12,7 @@ from sklearn.svm import SVR
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.pipeline import Pipeline
 from scipy.stats import randint, uniform
+from xgboost import XGBRegressor
 
 # === Load preprocessed data ===
 npz = np.load("../data/processed/train_test_data.npz", allow_pickle=True)
@@ -77,6 +78,14 @@ model_specs = {
             "estimator__C": uniform(0.1, 100),
             "estimator__epsilon": uniform(0.01, 1.0),
             "estimator__kernel": ["rbf"]
+        }
+    },
+    "XGBoost": {
+        "model": MultiOutputRegressor(XGBRegressor(objective='reg:squarederror', random_state=42)),
+        "params": {
+            "estimator__n_estimators": randint(100, 300),
+            "estimator__max_depth": randint(3, 10),
+            "estimator__learning_rate": uniform(0.01, 0.3)
         }
     }
 }
