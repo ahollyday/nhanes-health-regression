@@ -3,8 +3,12 @@ import numpy as np
 import yaml
 import os
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib.lines import Line2D
 import seaborn as sns
 import math
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
 
 def load_feature_config(path="../data/config/features.yaml"):
     with open(path, 'r') as f:
@@ -23,101 +27,139 @@ def summarize():
     target_features = [f["name"] for f in features if f["role"] == "target"]
     units = get_units_dict(features)
 
-    print(f"📂 Loaded cleaned data: {df.shape[0]} rows, {df.shape[1]} columns")
+    print("\n📉 Generating correlation heatmap...")
+    corr = df.drop(columns='SEQN', errors='ignore').corr(numeric_only=True)
+    fig, ax = plt.subplots(figsize=(12, 10), dpi=300)
+    mask = np.triu(np.ones_like(corr, dtype=bool))
+    heatmap = sns.heatmap(
+        corr,
+        mask=mask,
+        cmap='RdBu_r',
+        center=0,
+        annot=True,
+        fmt=".2f",
+        linewidths=0.5,
+        vmin=-1,
+        vmax=1,
+        cbar_kws={"shrink": 0.75, "label": "Pearson Correlation"},
+        ax=ax
+    )
+    plt.title("Linear Correlation Matrix", fontsize=12)
 
-    print("\n📊 Missing value summary:")
-    print(df.isna().sum().sort_values(ascending=False))
+    # Keep tick labels but remove tick marks
+    ax.tick_params(axis='both', which='both', length=0)
+    plt.xticks(rotation=45, ha='right')
+    plt.yticks(rotation=0)
 
-    print("\n📉 Percentage of missing values per column:")
-    missing_pct = df.isna().mean().sort_values(ascending=False) * 100
-    print(missing_pct[missing_pct > 0])
+    # Whiten specified axis labels
+    xticklabels = ax.get_xticklabels()
+    yticklabels = ax.get_yticklabels()
+    if xticklabels:
+        xticklabels[-1].set_color("white")
+    if yticklabels:
+        yticklabels[0].set_color("white")
 
-    print("\n📈 Descriptive stats for numeric features:")
-    print(df[numeric_features + target_features].describe().T)
+    # Bold target variable labels
+    for tick in xticklabels:
+        if tick.get_text() in target_features:
+            tick.set_fontweight("bold")
+    for tick in yticklabels:
+        if tick.get_text() in target_features:
+            tick.set_fontweight("bold")
 
-    for col in categorical_features:
-        if col in df.columns:
-            print(f"\n🔠 Value counts for categorical feature: {col}")
-            print(df[col].value_counts(dropna=False))
+    plt.tight_layout()
+    plt.savefig("../figures/eda/correlation_heatmap.png", dpi=300)
+    plt.close()
+    print("✅ Saved correlation heatmap to ../figures/eda/correlation_heatmap.png")
 
-    print("\n📸 Generating histograms for numeric features...")
+    print("\n📊 Generating histograms for numeric features...")
     os.makedirs("../figures/eda", exist_ok=True)
     n = len(numeric_features)
     ncols = 3
     nrows = math.ceil(n / ncols)
-    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols * 6, nrows * 4), dpi=200)
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols * 6, nrows * 4), dpi=300)
     axes = axes.flatten()
     for i, col in enumerate(numeric_features):
         if col in df.columns:
             sns.histplot(df[col].dropna(), kde=True, bins=30, ax=axes[i])
-            axes[i].set_title(f"{col} ({units.get(col, '')})")
-            axes[i].set_xlabel("")
-            axes[i].set_ylabel("")
+            axes[i].set_xlabel(f"{col} ({units.get(col, '')})")
+            axes[i].set_ylabel("Count")
     for j in range(i + 1, len(axes)):
         fig.delaxes(axes[j])
-    plt.tight_layout()
-    plt.savefig("../figures/eda/hist_numeric_features.png")
+    fig.suptitle("Numeric Feature Distributions", fontsize=14)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.97])
+    plt.savefig("../figures/eda/hist_numeric_features.png", dpi=300)
     plt.close()
     print("✅ Saved numeric feature histograms to ../figures/eda/hist_numeric_features.png")
 
     print("\n📊 Generating histograms for targets...")
     n = len(target_features)
-    fig, axes = plt.subplots(nrows=1, ncols=n, figsize=(n * 6, 4), dpi=200)
+    fig, axes = plt.subplots(nrows=1, ncols=n, figsize=(n * 6, 4), dpi=300)
     axes = axes if n > 1 else [axes]
     for i, col in enumerate(target_features):
         if col in df.columns:
             sns.histplot(df[col].dropna(), kde=True, bins=30, ax=axes[i])
-            axes[i].set_title(f"{col} ({units.get(col, '')})")
-            axes[i].set_xlabel("")
-            axes[i].set_ylabel("")
-    plt.tight_layout()
-    plt.savefig("../figures/eda/hist_targets.png")
+            axes[i].set_xlabel(f"{col} ({units.get(col, '')})")
+            axes[i].set_ylabel("Count")
+    fig.suptitle("Target Distributions", fontsize=14)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.97])
+    plt.savefig("../figures/eda/hist_targets.png", dpi=300)
     plt.close()
     print("✅ Saved target histograms to ../figures/eda/hist_targets.png")
 
-    print("\n📊 Generating offset boxplots of targets by each categorical feature...")
-    n_cols = 2
-    n_rows = int(np.ceil(len(categorical_features) / n_cols))
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 4 * n_rows), dpi=200)
-    axes = axes.flatten()
+    print("\n📉 Generating univariate linear regression plots...")
+    r2_table = pd.DataFrame(index=numeric_features, columns=target_features, dtype=float)
+    n_cols = 3
+    n_rows = math.ceil(len(numeric_features) / n_cols)
+    target_colors = dict(zip(target_features, sns.color_palette("tab10", len(target_features))))
 
-    base_box_param = dict(
-        whis=(5, 95), widths=0.18, patch_artist=True,
-        flierprops=dict(marker='.', markeredgecolor='black', markersize=3, linestyle='none'),
-        medianprops=dict(color='black', linewidth=1),
-        whiskerprops=dict(linewidth=0.8),
-        capprops=dict(linewidth=0.8)
-    )
+    for target in target_features:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3 * n_rows), dpi=300)
+        axes = axes.flatten()
+        for i, feature in enumerate(numeric_features):
+            ax = axes[i]
+            subset = df[[feature, target]].dropna()
+            X = subset[[feature]].values
+            y = subset[target].values
+            model = LinearRegression().fit(X, y)
+            y_pred = model.predict(X)
+            r2 = r2_score(y, y_pred)
+            r2_table.loc[feature, target] = r2
 
-    offsets = np.linspace(-0.2, 0.2, len(target_features))
-    colors = sns.color_palette("tab10", len(target_features))
+            sns.regplot(
+                x=feature,
+                y=target,
+                data=df,
+                ax=ax,
+                ci=95,
+                scatter_kws={'alpha': 1, 's': 8, 'color': target_colors[target]},
+                line_kws={'color': 'red'}
+            )
 
-    for i, cat in enumerate(categorical_features):
-        ax = axes[i]
-        categories = sorted(df[cat].dropna().unique())
-        nb_groups = len(categories)
+            ax.set_title(f"$R^2$ = {r2:.2f}")
+            ax.set_xlabel(f"{feature} ({units.get(feature, '')})")
+            ax.set_ylabel(f"{target} ({units.get(target, '')})")
+        for j in range(i + 1, len(axes)):
+            axes[j].axis('off')
 
-        for j, target in enumerate(target_features):
-            data = [df.loc[(df[cat] == c) & df[target].notna(), target] for c in categories]
-            valid_data = [d for d in data if len(d) > 0]
-            valid_pos = [p + offsets[j] for d, p in zip(data, np.arange(nb_groups)) if len(d) > 0]
-            valid_data = [d for d in data if len(d) > 0]
-            if valid_data:
-                ax.boxplot(valid_data, positions=valid_pos,
-                           boxprops=dict(facecolor=colors[j]), **base_box_param)
+        legend_elements = [
+            Line2D([0], [0], color='red', lw=2, label='Linear fit'),
+            Line2D([0], [0], color='red', lw=2, alpha=0.3, label='95% CI')
+        ]
+        fig.legend(
+            handles=legend_elements,
+            loc='lower center',
+            bbox_to_anchor=(0.5, -0.02),
+            ncol=2,
+            frameon=False,
+            fontsize=8
+        )
 
-        ax.set_xticks(np.arange(nb_groups))
-        ax.set_xticklabels(categories, rotation=30, ha='right')
-        ax.set_xlabel(cat)
-        ax.set_ylabel("Value")
+        fig.tight_layout(rect=[0, 0.05, 1, 1])
+        plt.savefig(f"../figures/eda/univariate_{target}.png", dpi=300)
+        plt.close()
 
-    for j in range(i + 1, len(axes)):
-        axes[j].axis('off')
-
-    plt.tight_layout(rect=[0, 0.05, 1, 1])
-    plt.savefig("../figures/eda/box_targets_by_categoricals.png")
-    plt.close()
-    print("✅ Saved offset boxplot figure to ../figures/eda/box_targets_by_categoricals.png")
+    print("✅ Saved univariate regression plots to ../figures/eda/")
 
 if __name__ == "__main__":
     summarize()

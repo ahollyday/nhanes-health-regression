@@ -12,9 +12,6 @@ features:
     file: DEMO_I
     type: categorical
     role: feature
-    map:
-      1: "Male"
-      2: "Female"
 
   - name: bmi
     source: BMXBMI
@@ -53,12 +50,6 @@ features:
     file: DEMO_I
     type: categorical
     role: feature
-    map:
-      1: "Mexican American"
-      2: "Other Hispanic"
-      3: "Non-Hispanic White"
-      4: "Non-Hispanic Black"
-      5: "Other/Multi-Racial"
 
   - name: drinks_per_day
     source: ALQ130
@@ -66,16 +57,13 @@ features:
     type: numeric
     role: feature
     drop_extrema: true
-    unit: drinks/day
+    unit: drinks
 
   - name: ever_smoked_100
     source: SMQ020
     file: SMQ_I
     type: categorical
     role: feature
-    map:
-      1: "Yes"
-      2: "No"
 
   - name: triglycerides
     source: LBXTR
@@ -83,6 +71,7 @@ features:
     type: numeric
     role: target
     drop_extrema: true
+    log_transform: true
     unit: mg/dL
 
   - name: hdl_cholesterol
@@ -91,6 +80,7 @@ features:
     type: numeric
     role: target
     drop_extrema: true
+    log_transform: false
     unit: mg/dL
 
   - name: monthly_family_income
@@ -98,17 +88,4 @@ features:
     file: INQ_I
     type: categorical
     role: feature
-    map:
-      1: "$0 - $399"
-      2: "$400 - $799"
-      3: "$800 - $1,249"
-      4: "$1,250 - $1,649"
-      5: "$1,650 - $2,099"
-      6: "$2,100 - $2,899"
-      7: "$2,900 - $3,749"
-      8: "$3,750 - $4,599"
-      9: "$4,600 - $5,399"
-      10: "$5,400 - $6,249"
-      11: "$6,250 - $8,399"
-      12: "$8,400+"
 
