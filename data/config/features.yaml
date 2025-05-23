@@ -1,35 +1,114 @@
 features:
-  - id: RIDAGEYR
-    name: age
+  - name: age
+    source: RIDAGEYR
+    file: DEMO_I
     type: numeric
-    missing_codes: [777, 999]
+    role: feature
+    drop_extrema: true
+    unit: years
 
-  - id: RIAGENDR
-    name: sex
+  - name: sex
+    source: RIAGENDR
+    file: DEMO_I
     type: categorical
-    categories:
-      1: Male
-      2: Female
-    missing_codes: [7, 9]
+    role: feature
+    map:
+      1: "Male"
+      2: "Female"
 
-  - id: RIDRETH1
-    name: race_ethnicity
+  - name: bmi
+    source: BMXBMI
+    file: BMX_I
+    type: numeric
+    role: feature
+    drop_extrema: true
+    unit: kg/m²
+
+  - name: systolic_bp
+    source: BPXSY1
+    file: BPX_I
+    type: numeric
+    role: feature
+    drop_extrema: true
+    unit: mmHg
+
+  - name: diastolic_bp
+    source: BPXDI1
+    file: BPX_I
+    type: numeric
+    role: feature
+    drop_extrema: true
+    unit: mmHg
+
+  - name: waist_circumference
+    source: BMXWAIST
+    file: BMX_I
+    type: numeric
+    role: feature
+    drop_extrema: true
+    unit: cm
+
+  - name: race_ethnicity
+    source: RIDRETH1
+    file: DEMO_I
     type: categorical
-    categories:
-      1: Mexican American
-      2: Other Hispanic
-      3: Non-Hispanic White
-      4: Non-Hispanic Black
-      5: Other Race
-    missing_codes: [7, 9]
+    role: feature
+    map:
+      1: "Mexican American"
+      2: "Other Hispanic"
+      3: "Non-Hispanic White"
+      4: "Non-Hispanic Black"
+      5: "Other/Multi-Racial"
 
-  - id: INDFMPIR
-    name: poverty_income_ratio
+  - name: drinks_per_day
+    source: ALQ130
+    file: ALQ_I
     type: numeric
-    missing_codes: [777, 999]
+    role: feature
+    drop_extrema: true
+    unit: drinks/day
 
-  - id: LBXTR
-    name: triglycerides
+  - name: ever_smoked_100
+    source: SMQ020
+    file: SMQ_I
+    type: categorical
+    role: feature
+    map:
+      1: "Yes"
+      2: "No"
+
+  - name: triglycerides
+    source: LBXTR
+    file: TRIGLY_I
     type: numeric
-    missing_codes: [777, 888, 999]
+    role: target
+    drop_extrema: true
+    unit: mg/dL
+
+  - name: hdl_cholesterol
+    source: LBDHDD
+    file: HDL_I
+    type: numeric
+    role: target
+    drop_extrema: true
+    unit: mg/dL
+
+  - name: monthly_family_income
+    source: IND235
+    file: INQ_I
+    type: categorical
+    role: feature
+    map:
+      1: "$0 - $399"
+      2: "$400 - $799"
+      3: "$800 - $1,249"
+      4: "$1,250 - $1,649"
+      5: "$1,650 - $2,099"
+      6: "$2,100 - $2,899"
+      7: "$2,900 - $3,749"
+      8: "$3,750 - $4,599"
+      9: "$4,600 - $5,399"
+      10: "$5,400 - $6,249"
+      11: "$6,250 - $8,399"
+      12: "$8,400+"
 
