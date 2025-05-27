@@ -15,7 +15,11 @@ INVALID_VALUES = {
     'total_savings': [77, 99],
     'ever_smoked_100': [7, 9],
     'sex': [7, 9],
-    'race_ethnicity': [7, 9]
+    'race_ethnicity': [7, 9],
+    'has_health_insurance': [7, 9],
+    'daily_sedentary_activity': [7777, 9999],
+    'daily_intense_work': [7777, 9999],
+    'weekly_hrs_worked': [77777, 99999]
 }
 
 def load_feature_config(config_path):
@@ -96,6 +100,15 @@ def load_and_clean_nhanes():
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df_clean.to_csv(output_path, index=False)
     print(f"✅ Saved cleaned data to {output_path}")
+
+    # === Summary info ===
+    categorical = [f["name"] for f in features if f["type"] == "categorical"]
+    numerical = [f["name"] for f in features if f["type"] == "numeric" or f["type"] == "numerical"]
+    print("\n🔎 Summary of cleaned dataset:")
+    print(f"Categorical features: {categorical}")
+    print(f"Numerical features: {numerical}")
+    print(f"Target variables: {target_cols}")
+    print(f"Cleaned data shape: {df_clean.shape}")
 
 if __name__ == "__main__":
     load_and_clean_nhanes()

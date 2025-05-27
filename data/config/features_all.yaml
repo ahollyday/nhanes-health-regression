@@ -1,0 +1,192 @@
+features:
+  - name: age
+    source: RIDAGEYR
+    file: DEMO_I
+    type: numeric
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: years
+
+  - name: sex
+    source: RIAGENDR
+    file: DEMO_I
+    type: categorical
+    role: feature
+
+  - name: bmi
+    source: BMXBMI
+    file: BMX_I
+    type: numeric
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: kg/m²
+
+  - name: systolic_bp
+    source: BPXSY1
+    file: BPX_I
+    type: numeric
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: mmHg
+
+  - name: diastolic_bp
+    source: BPXDI1
+    file: BPX_I
+    type: numeric
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: mmHg
+
+  - name: waist_circumference
+    source: BMXWAIST
+    file: BMX_I
+    type: numeric
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: cm
+
+  - name: race_ethnicity
+    source: RIDRETH1
+    file: DEMO_I
+    type: categorical
+    role: feature
+
+  - name: drinks_per_day
+    source: ALQ130
+    file: ALQ_I
+    type: numeric
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: drinks
+
+  - name: ever_smoked_100
+    source: SMQ020
+    file: SMQ_I
+    type: categorical
+    role: feature
+
+  - name: triglycerides
+    source: LBXTR
+    file: TRIGLY_I
+    type: numeric
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: mg/dL
+
+  - name: hdl_cholesterol
+    source: LBDHDD
+    file: HDL_I
+    type: numeric
+    role: target
+    drop_extrema: true
+    log_transform: false
+    unit: mg/dL
+
+  - name: monthly_family_income
+    source: IND235
+    file: INQ_I
+    type: categorical
+    role: feature
+
+  - name: albumin
+    source: URXUMA
+    file: ALB_CR_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: ug/mL
+
+  - name: creatinine
+    source: URXCRS
+    file: ALB_CR_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: umol/L
+
+  - name: glycohemoglobin
+    source: LBXGH
+    file: GHB_I
+    type: numerical
+    role: target
+    drop_extrema: true
+    log_transform: false
+    unit: percent
+
+  - name: weekly_hrs_worked
+    source: OCQ180
+    file: OCQ_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: hours
+
+  - name: daily_intense_work
+    source: PAD615
+    file: PAQ_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: minutes
+
+  - name: daily_sedentary_activity
+    source: PAD680
+    file: PAQ_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: minutes
+
+  - name: hydroxyvitamin_d2_d3
+    source: LBXVIDMS
+    file: VID_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: nmol/L
+
+  - name: daily_calories
+    source: DR1TKCAL
+    file: DR1TOT_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: kcal
+
+  - name: daily_total_fat
+    source: DR1TTFAT
+    file: DR1TOT_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: g
+
+  - name: daily_sugar
+    source: DR1TSUGR
+    file: DR1TOT_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: g
+
+  - name: has_health_insurance
+    source: HIQ011
+    file: HIQ_I
+    type: categorical
+    role: feature

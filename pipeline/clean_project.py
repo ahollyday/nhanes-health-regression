@@ -5,7 +5,7 @@ paths_to_clean = {
     "../data/processed": [".csv", ".npz"],
     "../models": [".pkl", ".joblib"],
     "../summaries": [".csv"],
-    "../figures": [".png"],
+    "../figures/eda": [".png"],
     "../figures/evaluation": [".png"],
     "../data/input": [".csv"]
 }

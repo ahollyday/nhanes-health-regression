@@ -10,14 +10,24 @@ from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.svm import SVR
 from sklearn.metrics import r2_score, mean_squared_error
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
 from scipy.stats import randint, uniform
 from xgboost import XGBRegressor
+from sklearn.preprocessing import FunctionTransformer
+from scipy.sparse import issparse
+import sys
 
 # === Load preprocessed data ===
 npz = np.load("../data/processed/train_test_data.npz", allow_pickle=True)
 X_train = npz["X_train"]
 y_train = pd.DataFrame(npz["y_train"])
+
+#if issparse(X_train):
+#    print("❌ X_train is a sparse matrix. Exiting to prevent LinearRegression failure.")
+#    exit(1)
+#    sys.exit("exiting")
+
+#sys.exit("exiting")
 
 # === Load target names dynamically ===
 def load_feature_config():
@@ -43,7 +53,7 @@ target_names = load_target_names()
 log_targets = get_log_transform_targets()
 y_train.columns = target_names
 
-# === Define models and parameter distributions ===
+# === Define models and expanded parameter distributions ===
 model_specs = {
     "Linear Regression": {
         "model": MultiOutputRegressor(LinearRegression()),
@@ -52,23 +62,27 @@ model_specs = {
     "Random Forest": {
         "model": MultiOutputRegressor(RandomForestRegressor(random_state=42)),
         "params": {
-            "estimator__n_estimators": randint(100, 500),
-            "estimator__max_depth": randint(3, 20),
-            "estimator__min_samples_split": randint(2, 10)
+            "estimator__n_estimators": randint(100, 1000),
+            "estimator__max_depth": randint(3, 30),
+            "estimator__min_samples_split": randint(2, 20),
+            "estimator__min_samples_leaf": randint(1, 10),
+            "estimator__max_features": ["sqrt", "log2"]
         }
     },
     "Gradient Boosting": {
         "model": MultiOutputRegressor(GradientBoostingRegressor(random_state=42)),
         "params": {
-            "estimator__n_estimators": randint(100, 300),
-            "estimator__learning_rate": uniform(0.01, 0.3),
-            "estimator__max_depth": randint(3, 10)
+            "estimator__n_estimators": randint(100, 1000),
+            "estimator__learning_rate": uniform(0.001, 0.3),
+            "estimator__max_depth": randint(3, 10),
+            "estimator__subsample": uniform(0.5, 0.5),
+            "estimator__min_samples_leaf": randint(1, 10)
         }
     },
     "KNN": {
         "model": MultiOutputRegressor(KNeighborsRegressor()),
         "params": {
-            "estimator__n_neighbors": randint(5, 30),
+            "estimator__n_neighbors": randint(5, 50),
             "estimator__weights": ["uniform", "distance"]
         }
     },
@@ -83,9 +97,11 @@ model_specs = {
     "XGBoost": {
         "model": MultiOutputRegressor(XGBRegressor(objective='reg:squarederror', random_state=42)),
         "params": {
-            "estimator__n_estimators": randint(100, 300),
-            "estimator__max_depth": randint(3, 10),
-            "estimator__learning_rate": uniform(0.01, 0.3)
+            "estimator__n_estimators": randint(100, 1000),
+            "estimator__max_depth": randint(3, 15),
+            "estimator__learning_rate": uniform(0.001, 0.3),
+            "estimator__subsample": uniform(0.5, 0.5),
+            "estimator__colsample_bytree": uniform(0.5, 0.5)
         }
     }
 }
@@ -144,4 +160,3 @@ print("📊 Saved training metrics to ../summaries/train_metrics.csv")
 residuals_df = pd.concat(residuals, ignore_index=True)
 residuals_df.to_csv("../summaries/train_residuals.csv", index=False)
 print("📉 Saved training residuals to ../summaries/train_residuals.csv")
-
