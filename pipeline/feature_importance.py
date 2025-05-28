@@ -45,13 +45,17 @@ for model_file in model_files:
             for k, v in grouped.items()
         }
 
+        # === Normalize to get relative importance
+        total_importance = sum(aggr_importances.values())
+        aggr_importances = {k: v / total_importance for k, v in aggr_importances.items()}
+
         # === Plot ===
         importance_df = pd.DataFrame.from_dict(aggr_importances, orient="index", columns=["Importance"])
-        importance_df = importance_df.sort_values("Importance", ascending=False).head(20)
+        importance_df = importance_df.sort_values("Importance", ascending=False)
 
         plt.figure(figsize=(10, 6))
         importance_df.plot(kind="barh", legend=False, color="steelblue")
-        plt.xlabel("Mean Importance Score")
+        plt.xlabel("Relative Importance (Sum = 1)")
         plt.ylabel("Feature")
         plt.title(f"Top Features – {model_name}")
         plt.gca().invert_yaxis()
@@ -60,5 +64,5 @@ for model_file in model_files:
         output_path = f"../figures/feature_importance/feature_importance_{model_file.replace('.pkl', '')}.png"
         plt.savefig(output_path, dpi=300)
         plt.close()
-        print(f"✅ Saved feature importance plot to {output_path}")
+        print(f"✅ Saved normalized feature importance plot to {output_path}")
 
