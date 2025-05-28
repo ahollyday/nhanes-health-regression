@@ -118,7 +118,7 @@ with open("../models/best_models.txt", "w") as f:
         params = spec.get("params")
 
         if params:
-            clf = RandomizedSearchCV(model, params, n_iter=25, cv=3, scoring="r2", verbose=1, n_jobs=-1, random_state=42)
+            clf = RandomizedSearchCV(model, params, n_iter=5, cv=10, scoring="r2", verbose=1, n_jobs=3, random_state=42)
             clf.fit(X_train, y_train)
             best_model = clf.best_estimator_
         else:

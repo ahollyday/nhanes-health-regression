@@ -1,49 +1,59 @@
 features:
-- name: hdl_cholesterol
-  source: LBDHDD
-  file: HDL_I
-  type: numeric
-  role: target
-  drop_extrema: true
-  log_transform: false
-  unit: mg/dL
 - name: glycohemoglobin
   source: LBXGH
   file: GHB_I
   type: numerical
-  role: target
-  drop_extrema: true
-  log_transform: false
-  unit: percent
-- name: creatinine
-  source: URXCRS
-  file: ALB_CR_I
-  type: numerical
   role: feature
   drop_extrema: true
   log_transform: false
-  unit: umol/L
-- name: waist_circumference
-  source: BMXWAIST
-  file: BMX_I
+  unit: percent
+- name: hdl_cholesterol
+  source: LBDHDD
+  file: HDL_I
   type: numeric
   role: feature
   drop_extrema: true
   log_transform: false
-  unit: cm
-- name: albumin
-  source: URXUMA
-  file: ALB_CR_I
-  type: numerical
+  unit: mg/dL
+- name: ever_smoked_100
+  source: SMQ020
+  file: SMQ_I
+  type: categorical
   role: feature
+- name: race_ethnicity
+  source: RIDRETH1
+  file: DEMO_I
+  type: categorical
+  role: feature
+- name: diastolic_bp
+  source: BPXDI1
+  file: BPX_I
+  type: numeric
+  role: target
   drop_extrema: true
   log_transform: false
-  unit: ug/mL
+  unit: mmHg
 - name: has_health_insurance
   source: HIQ011
   file: HIQ_I
   type: categorical
   role: feature
+- name: creatinine
+  source: URXCRS
+  file: ALB_CR_I
+  type: numerical
+  role: target
+  drop_extrema: true
+  log_transform: true
+  unit: umol/L
+- name: daily_sedentary_activity
+  source: PAD680
+  file: PAQ_I
+  type: numerical
+  role: target
+  drop_extrema: true
+  log_transform: false
+  unit: minutes
 - name: systolic_bp
   source: BPXSY1
   file: BPX_I
@@ -52,22 +62,24 @@ features:
   drop_extrema: true
   log_transform: false
   unit: mmHg
-- name: daily_total_fat
-  source: DR1TTFAT
-  file: DR1TOT_I
+- name: sex
+  source: RIAGENDR
+  file: DEMO_I
+  type: categorical
+  role: feature
+- name: hydroxyvitamin_d2_d3
+  source: LBXVIDMS
+  file: VID_I
   type: numerical
   role: feature
   drop_extrema: true
   log_transform: false
-  unit: g
-- name: daily_intense_work
-  source: PAD615
-  file: PAQ_I
-  type: numerical
+  unit: nmol/L
+- name: monthly_family_income
+  source: IND235
+  file: INQ_I
+  type: categorical
   role: feature
-  drop_extrema: true
-  log_transform: false
-  unit: minutes
 - name: daily_calories
   source: DR1TKCAL
   file: DR1TOT_I
@@ -76,37 +88,27 @@ features:
   drop_extrema: true
   log_transform: false
   unit: kcal
-- name: daily_sedentary_activity
-  source: PAD680
-  file: PAQ_I
-  type: numerical
-  role: feature
-  drop_extrema: true
-  log_transform: false
-  unit: minutes
-- name: diastolic_bp
-  source: BPXDI1
-  file: BPX_I
+- name: triglycerides
+  source: LBXTR
+  file: TRIGLY_I
   type: numeric
   role: feature
   drop_extrema: true
   log_transform: false
-  unit: mmHg
-- name: drinks_per_day
-  source: ALQ130
-  file: ALQ_I
+  unit: mg/dL
+- name: bmi
+  source: BMXBMI
+  file: BMX_I
   type: numeric
   role: feature
   drop_extrema: true
   log_transform: false
-  unit: drinks
-- name: sex
-  source: RIAGENDR
+  unit: "kg/m\xB2"
+- name: age
+  source: RIDAGEYR
   file: DEMO_I
-  type: categorical
+  type: numeric
   role: feature
-- name: monthly_family_income
-  source: IND235
-  file: INQ_I
-  type: categorical
-  role: feature
+  drop_extrema: true
+  log_transform: false
+  unit: years

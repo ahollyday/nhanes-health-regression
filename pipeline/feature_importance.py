@@ -1,49 +1,64 @@
-import os
-import joblib
 import pandas as pd
 import numpy as np
-import yaml
+import matplotlib.pyplot as plt
+import joblib
+import os
+import re
+from collections import defaultdict
 
+# === Load preprocessor ===
+preprocessor = joblib.load("../models/preprocessor.joblib")
+feature_names = preprocessor.get_feature_names_out()
 
-def load_feature_config(config_path='data/config/features.yaml'):
-    with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
+# === Collapse one-hot encoded feature names ===
+def collapse_onehot_feature_names(feature_names):
+    grouped = defaultdict(list)
+    for name in feature_names:
+        if "cat__" in name:
+            base = re.sub(r"_\d+(\.0)?$", "", name.split("cat__")[1])
+        elif "num__" in name:
+            base = name.split("num__")[1]
+        else:
+            base = name
+        grouped[base].append(name)
+    return grouped
 
+# === Load and evaluate each model ===
+model_dir = "../models"
+os.makedirs("../figures/eda", exist_ok=True)
+model_files = [f for f in os.listdir(model_dir) if f.endswith(".pkl") and f != "preprocessor.joblib"]
 
-def extract_feature_importance():
-    features = load_feature_config()
-    cat_features = [f['name'] for f in features if f['type'] == 'categorical']
-    num_features = [f['name'] for f in features if f['type'] == 'numeric']
-    all_features = cat_features + num_features
+for model_file in model_files:
+    model_path = os.path.join(model_dir, model_file)
+    model_name = model_file.replace(".pkl", "").replace("_", " ").title()
+    model = joblib.load(model_path)
 
-    importances = []
+    if hasattr(model, "estimators_") and hasattr(model.estimators_[0], "feature_importances_"):
+        # === Get feature importances ===
+        all_importances = np.array([est.feature_importances_ for est in model.estimators_])
+        mean_importances = np.mean(all_importances, axis=0)
 
-    for fname in os.listdir('models'):
-        if not fname.endswith('_best_model.joblib'):
-            continue
+        # === Aggregate importances ===
+        grouped = collapse_onehot_feature_names(feature_names)
+        aggr_importances = {
+            k: mean_importances[[np.where(feature_names == f)[0][0] for f in v]].sum()
+            for k, v in grouped.items()
+        }
 
-        model_name = fname.replace('_best_model.joblib', '')
-        model = joblib.load(f'models/{fname}')
-        regressor = model.named_steps['regressor']
+        # === Plot ===
+        importance_df = pd.DataFrame.from_dict(aggr_importances, orient="index", columns=["Importance"])
+        importance_df = importance_df.sort_values("Importance", ascending=False).head(20)
 
-        if hasattr(regressor, 'estimators_'):
-            for i, est in enumerate(regressor.estimators_):
-                if hasattr(est, 'feature_importances_'):
-                    fi = est.feature_importances_
-                    df = pd.DataFrame({
-                        'Model': model_name,
-                        'Target': i,
-                        'Feature': model.named_steps['preprocessor'].get_feature_names_out(),
-                        'Importance': fi
-                    })
-                    importances.append(df)
+        plt.figure(figsize=(10, 6))
+        importance_df.plot(kind="barh", legend=False, color="steelblue")
+        plt.xlabel("Mean Importance Score")
+        plt.ylabel("Feature")
+        plt.title(f"Top Features – {model_name}")
+        plt.gca().invert_yaxis()
+        plt.tight_layout()
 
-    final_df = pd.concat(importances, ignore_index=True)
-    os.makedirs('summaries', exist_ok=True)
-    final_df.to_csv('summaries/feature_importances.csv', index=False)
-    print("✅ Feature importances saved to summaries/feature_importances.csv")
-
-
-if __name__ == '__main__':
-    extract_feature_importance()
+        output_path = f"../figures/eda/feature_importance_{model_file.replace('.pkl', '')}.png"
+        plt.savefig(output_path, dpi=300)
+        plt.close()
+        print(f"✅ Saved feature importance plot to {output_path}")
 
