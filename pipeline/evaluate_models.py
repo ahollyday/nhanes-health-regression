@@ -134,7 +134,7 @@ npz = np.load("../data/processed/train_test_data.npz", allow_pickle=True)
 X_train = npz["X_train"]
 y_train = npz["y_train"]
 
-folds = [2, 3, 5, 10, 20]
+folds = [3, 5, 10, 20]
 results = []
 
 for f in model_files:

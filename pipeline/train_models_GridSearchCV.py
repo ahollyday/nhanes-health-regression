@@ -1,33 +1,22 @@
+
 import pandas as pd
 import joblib
 import numpy as np
 import os
 import yaml
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.svm import SVR
 from sklearn.metrics import r2_score, mean_squared_error
-from sklearn.pipeline import Pipeline, make_pipeline
-from scipy.stats import randint, uniform
 from xgboost import XGBRegressor
-from sklearn.preprocessing import FunctionTransformer
-from scipy.sparse import issparse
-import sys
 
 # === Load preprocessed data ===
 npz = np.load("../data/processed/train_test_data.npz", allow_pickle=True)
 X_train = npz["X_train"]
 y_train = pd.DataFrame(npz["y_train"])
-
-#if issparse(X_train):
-#    print("❌ X_train is a sparse matrix. Exiting to prevent LinearRegression failure.")
-#    exit(1)
-#    sys.exit("exiting")
-
-#sys.exit("exiting")
 
 # === Load target names dynamically ===
 def load_feature_config():
@@ -53,7 +42,7 @@ target_names = load_target_names()
 log_targets = get_log_transform_targets()
 y_train.columns = target_names
 
-# === Define models and expanded parameter distributions ===
+# === Define models and parameter grids ===
 model_specs = {
     "Linear Regression": {
         "model": MultiOutputRegressor(LinearRegression()),
@@ -62,46 +51,46 @@ model_specs = {
     "Random Forest": {
         "model": MultiOutputRegressor(RandomForestRegressor(random_state=42)),
         "params": {
-            "estimator__n_estimators": randint(100, 1000),
-            "estimator__max_depth": randint(3, 30),
-            "estimator__min_samples_split": randint(2, 20),
-            "estimator__min_samples_leaf": randint(1, 10),
+            "estimator__n_estimators": [100, 300],
+            "estimator__max_depth": [10, 30],
+            "estimator__min_samples_split": [2, 10],
+            "estimator__min_samples_leaf": [1, 5],
             "estimator__max_features": ["sqrt", "log2"]
         }
     },
     "Gradient Boosting": {
         "model": MultiOutputRegressor(GradientBoostingRegressor(random_state=42)),
         "params": {
-            "estimator__n_estimators": randint(100, 1000),
-            "estimator__learning_rate": uniform(0.001, 0.3),
-            "estimator__max_depth": randint(3, 10),
-            "estimator__subsample": uniform(0.5, 0.5),
-            "estimator__min_samples_leaf": randint(1, 10)
+            "estimator__n_estimators": [100, 300],
+            "estimator__learning_rate": [0.01, 0.1],
+            "estimator__max_depth": [3, 5],
+            "estimator__subsample": [0.5, 1.0],
+            "estimator__min_samples_leaf": [1, 5]
         }
     },
     "KNN": {
         "model": MultiOutputRegressor(KNeighborsRegressor()),
         "params": {
-            "estimator__n_neighbors": randint(5, 50),
+            "estimator__n_neighbors": [5, 10, 20],
             "estimator__weights": ["uniform", "distance"]
         }
     },
     "SVR": {
         "model": MultiOutputRegressor(SVR()),
         "params": {
-            "estimator__C": uniform(0.1, 100),
-            "estimator__epsilon": uniform(0.01, 1.0),
+            "estimator__C": [0.1, 1, 10],
+            "estimator__epsilon": [0.01, 0.1],
             "estimator__kernel": ["rbf"]
         }
     },
     "XGBoost": {
         "model": MultiOutputRegressor(XGBRegressor(objective='reg:squarederror', random_state=42)),
         "params": {
-            "estimator__n_estimators": randint(100, 1000),
-            "estimator__max_depth": randint(3, 15),
-            "estimator__learning_rate": uniform(0.001, 0.3),
-            "estimator__subsample": uniform(0.5, 0.5),
-            "estimator__colsample_bytree": uniform(0.5, 0.5)
+            "estimator__n_estimators": [100, 300],
+            "estimator__max_depth": [3, 6],
+            "estimator__learning_rate": [0.01, 0.1],
+            "estimator__subsample": [0.5, 1.0],
+            "estimator__colsample_bytree": [0.5, 1.0]
         }
     }
 }
@@ -118,7 +107,7 @@ with open("../models/best_models.txt", "w") as f:
         params = spec.get("params")
 
         if params:
-            clf = RandomizedSearchCV(model, params, n_iter=5, cv=10, scoring="r2", verbose=1, n_jobs=3, random_state=42)
+            clf = GridSearchCV(model, params, cv=5, scoring="r2", verbose=1, n_jobs=3)
             clf.fit(X_train, y_train)
             best_model = clf.best_estimator_
         else:
@@ -137,8 +126,6 @@ with open("../models/best_models.txt", "w") as f:
             **{f"R2 - {target_names[i]}": r2[i] for i in range(len(target_names))},
             **{f"RMSE - {target_names[i]}": rmse[i] for i in range(len(target_names))}
         })
-
-        print(f"📈 Mean R² across targets: {np.mean(r2):.3f}")
 
         for i, target in enumerate(target_names):
             residuals.append(pd.DataFrame({

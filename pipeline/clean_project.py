@@ -1,16 +1,17 @@
 import os
 
-# Define paths and what to clean
+# Define paths and extensions to clean
 paths_to_clean = {
     "../data/processed": [".csv", ".npz"],
     "../models": [".pkl", ".joblib"],
     "../summaries": [".csv"],
     "../figures/eda": [".png"],
     "../figures/evaluation": [".png"],
-    "../data/input": [".csv"]
+    "../figures/evaluation/optuna_visuals": [".png"],
+    "../data/input": [".csv"],
+    "../optuna_studies": [".db"]  # New: remove Optuna database files
 }
 
-# Function to safely delete only matching files
 def clean():
     for path, extensions in paths_to_clean.items():
         if not os.path.exists(path):
