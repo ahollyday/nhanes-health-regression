@@ -18,9 +18,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # === Global config ===
-CV_FOLDS = 3
-N_TRIALS = 4
-MAX_TIME = 18000 # 30 mins
+CV_FOLDS = 10
+N_TRIALS = 1000
+MAX_TIME = 120 #(18000 = 30 mins)
 optuna_study_dir = "../optuna_studies"
 os.makedirs(optuna_study_dir, exist_ok=True)
 
@@ -95,7 +95,9 @@ def train_and_save(model_name, model):
         residuals.append(pd.DataFrame({
             "Model": model_name,
             "Target": target,
-            "Residual": y_true_df.iloc[:, i] - y_pred_df.iloc[:, i]
+            "Residual": y_true_df.iloc[:, i] - y_pred_df.iloc[:, i],
+            "True": y_true_df.iloc[:, i],
+            "Predicted": y_pred_df.iloc[:, i]
         }))
 
     model_path = os.path.join(model_dir, f"{model_name.replace(' ', '_').lower()}.pkl")

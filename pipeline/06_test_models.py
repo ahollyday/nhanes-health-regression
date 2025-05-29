@@ -63,7 +63,9 @@ for filename in model_files:
         residuals.append(pd.DataFrame({
             "Model": name,
             "Target": target,
-            "Residual": y_true_df.iloc[:, i] - y_pred_df.iloc[:, i]
+            "Residual": y_true_df.iloc[:, i] - y_pred_df.iloc[:, i],
+            "True": y_true_df.iloc[:,i],
+            "Predicted": y_pred_df.iloc[:,i] 
         }))
 
 # === Save results ===

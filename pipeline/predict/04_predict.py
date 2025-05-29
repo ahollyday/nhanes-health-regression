@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from joblib import load
 import yaml
+from sklearn.metrics import r2_score, mean_squared_error
 
 # === Paths ===
 PREDICT_DATA_PATH = "../../data/predict_processed/clean_data_2017_2018.csv"
@@ -82,4 +83,50 @@ os.makedirs(os.path.dirname(OUTPUT_FIG_PATH), exist_ok=True)
 plt.savefig(OUTPUT_FIG_PATH)
 plt.close()
 print(f"✅ Saved figure to {OUTPUT_FIG_PATH}")
+
+# === Save predictions for Tableau ===
+
+results = []
+residuals = []
+
+for model_name, df_pred in predictions.items():
+    r2_vals = []
+    rmse_vals = []
+
+    for i, target in enumerate(y_cols):
+        true_vals = y_true[target]
+        pred_vals = df_pred[target]
+
+        r2 = r2_score(true_vals, pred_vals)
+        rmse = np.sqrt(mean_squared_error(true_vals, pred_vals))
+
+        r2_vals.append(r2)
+        rmse_vals.append(rmse)
+
+        residuals.append(pd.DataFrame({
+            "Model": model_name,
+            "Target": target,
+            "True": true_vals,
+            "Predicted": pred_vals,
+            "Residual": true_vals - pred_vals
+        }))
+
+    results.append({
+        "Model": model_name,
+        **{f"R2 - {y_cols[i]}": r2_vals[i] for i in range(len(y_cols))},
+        **{f"RMSE - {y_cols[i]}": rmse_vals[i] for i in range(len(y_cols))}
+    })
+
+# Save CSVs
+results_df = pd.DataFrame(results)
+results_df.to_csv("../../summaries/prediction_metrics_2017_2018.csv", index=False)
+
+residuals_df = pd.concat(residuals, ignore_index=True)
+residuals_df.to_csv("../../summaries/prediction_residuals_2017_2018.csv", index=False)
+
+print(f"📊 Saved prediction data metrics and residuals")
+
+
+
+
 
