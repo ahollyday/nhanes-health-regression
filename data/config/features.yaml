@@ -56,14 +56,14 @@ features:
     type: categorical
     role: feature
 
-  - name: drinks_per_day
-    source: ALQ130
-    file: ALQ_I
-    type: numeric
-    role: feature
-    drop_extrema: true
-    log_transform: false
-    unit: drinks
+#  - name: drinks_per_day
+#    source: ALQ130
+#    file: ALQ_I
+#    type: numeric
+#    role: feature
+#    drop_extrema: true
+#    log_transform: false
+#    unit: drinks
 
   - name: ever_smoked_100
     source: SMQ020
@@ -122,23 +122,23 @@ features:
     log_transform: false
     unit: percent
 
-  - name: weekly_hrs_worked
-    source: OCQ180
-    file: OCQ_I
-    type: numerical
-    role: feature
-    drop_extrema: true
-    log_transform: false
-    unit: hours
+#  - name: weekly_hrs_worked
+#    source: OCQ180
+#    file: OCQ_I
+#    type: numerical
+#    role: feature
+#    drop_extrema: true
+#    log_transform: false
+#    unit: hours
 
-  - name: daily_intense_work
-    source: PAD615
-    file: PAQ_I
-    type: numerical
-    role: feature
-    drop_extrema: true
-    log_transform: false
-    unit: minutes
+#  - name: daily_intense_work
+#    source: PAD615
+#    file: PAQ_I
+#    type: numerical
+#    role: feature
+#    drop_extrema: true
+#    log_transform: false
+#    unit: minutes
 
   - name: daily_sedentary_activity
     source: PAD680
