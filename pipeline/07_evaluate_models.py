@@ -20,16 +20,12 @@ target_names = [f["name"] for f in features if f["role"] == "target"]
 target_units = {f["name"]: f.get("unit", "") for f in features if f["role"] == "target"}
 target_display_names = {f["name"]: f.get("display_name", f["name"]) for f in features if f["role"] == "target"}
 
-print(f"\n loading complete")
-
 # === Standardize model names ===
 def standardize_model_name(name):
     name = name.strip().lower()
     if name == "linear regression":
         return "Baseline Linear Model"
     return name.title()
-
-print(f"\n standardized names complete")
 
 # === Load metrics and residuals ===
 train_metrics = pd.read_csv("../summaries/train_metrics.csv")
@@ -40,8 +36,6 @@ test_res = pd.read_csv("../summaries/test_residuals.csv")
 for df in [train_metrics, test_metrics, train_res, test_res]:
     df["Model"] = df["Model"].apply(standardize_model_name)
 
-print(f"\n loaded metrics complete")
-
 # === Parse metrics ===
 def extract_metric(df, metric):
     return df.filter(like=metric).set_index(df["Model"])
@@ -51,15 +45,11 @@ r2_test = extract_metric(test_metrics, "R2")
 rmse_train = extract_metric(train_metrics, "RMSE")
 rmse_test = extract_metric(test_metrics, "RMSE")
 
-print(f"\n parsed metrics complete")
-
 # === Define consistent tab10 color palette ===
 all_models = sorted(set(train_metrics["Model"]) | set(test_metrics["Model"]) |
                     set(train_res["Model"]) | set(test_res["Model"]))
 palette = sns.color_palette("tab10", n_colors=len(all_models))
 model_colors = dict(zip(all_models, palette))
-
-print(f"\n defined colors complete")
 
 # === Plot R^2 and RMSE comparison ===
 sns.set(style="white")
@@ -91,8 +81,6 @@ plt.tight_layout()
 os.makedirs("../figures/evaluation", exist_ok=True)
 plt.savefig("../figures/evaluation/train_test_metrics_comparison.png", dpi=300)
 
-print(f"\n plotted r2 and rmse complete")
-
 # === Residual overlay ===
 def plot_residual_overlay(df, split):
     g = sns.FacetGrid(df, col="Target", sharex=False, sharey=False, col_wrap=2, height=3.5, aspect=1.4)
@@ -121,8 +109,6 @@ def plot_residual_overlay(df, split):
 
 plot_residual_overlay(train_res, "Train")
 plot_residual_overlay(test_res, "Test")
-
-print(f"\n plot residuals complete")
 
 # === CV analysis ===
 from sklearn.model_selection import cross_validate

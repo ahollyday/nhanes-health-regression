@@ -20,6 +20,7 @@ warnings.filterwarnings("ignore")
 # === Global config ===
 CV_FOLDS = 3
 N_TRIALS = 4
+MAX_TIME = 18000 # 30 mins
 optuna_study_dir = "../optuna_studies"
 os.makedirs(optuna_study_dir, exist_ok=True)
 
@@ -71,23 +72,9 @@ def run_study(model_name, objective_func):
         direction="maximize",
         load_if_exists=True
     )
-    study.optimize(objective_func, n_trials=N_TRIALS)
+    study.optimize(objective_func, n_trials=N_TRIALS, timeout=MAX_TIME)
     print(f"✅ Best parameters for {model_name}: {study.best_params}")
     return study.best_params
-
-
-#def run_study(model_name, objective_func):
-#    print(f"🔍 Running Optuna for: {model_name}")
-#    storage_path = f"sqlite:///{os.path.join(optuna_study_dir, f'optuna_{model_name.replace(' ', '_').lower()}.db')}"
-#    study = optuna.create_study(
-#        study_name=model_name.replace(" ", "_").lower(),
-#        storage=storage_path,
-#        direction="maximize",
-#        load_if_exists=True
-#    )
-#    study.optimize(objective_func, n_trials=N_TRIALS)
-#    print(f"✅ Best parameters for {model_name}: {study.best_params}")
-#    return study.best_params
 
 def train_and_save(model_name, model):
     model.fit(X_train, y_train)
@@ -167,6 +154,7 @@ with open("../models/best_models.txt", "w") as f:
         model = MultiOutputRegressor(SVR(
             C=trial.suggest_float("C", 0.1, 100),
             epsilon=trial.suggest_float("epsilon", 0.01, 1.0),
+            gamma=trial.suggest_float("gamma", 1e-4, 1e-1, log=True),
             kernel="rbf"))
         return cross_val_score(model, X_train, y_train, cv=CV_FOLDS, scoring='r2').mean()
 
@@ -183,6 +171,8 @@ with open("../models/best_models.txt", "w") as f:
             learning_rate=trial.suggest_float("learning_rate", 0.001, 0.3),
             subsample=trial.suggest_float("subsample", 0.5, 1.0),
             colsample_bytree=trial.suggest_float("colsample_bytree", 0.5, 1.0),
+            min_child_weight=trial.suggest_int("min_child_weight", 1, 10),
+            gamma=trial.suggest_float("gamma", 0, 5.0),
             random_state=42,
             n_jobs=1))
         return cross_val_score(model, X_train, y_train, cv=CV_FOLDS, scoring='r2').mean()

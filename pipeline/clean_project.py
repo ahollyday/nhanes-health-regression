@@ -9,7 +9,11 @@ paths_to_clean = {
     "../figures/evaluation": [".png"],
     "../figures/evaluation/optuna_visuals": [".png"],
     "../data/input": [".csv"],
-    "../optuna_studies": [".db"]  # New: remove Optuna database files
+    "../optuna_studies": [".db"],
+    "../data/predict_processed": [".npy", ".csv"],
+    "../figures/predictions/": [".png"],
+    "../figures/predictions/eda": [".png"],    
+    "../figures/feature_importance": [".png"]
 }
 
 def clean():
