@@ -10,7 +10,7 @@ import math
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
-def load_feature_config(path="../data/config/features.yaml"):
+def load_feature_config(path="../../data/config/features.yaml"):
     with open(path, 'r') as f:
         return yaml.safe_load(f)["features"]
 
@@ -19,7 +19,7 @@ def get_units_dict(features):
 
 def summarize():
     print("Loading cleaned data...")
-    df = pd.read_csv("../data/processed/clean_data.csv")
+    df = pd.read_csv("../../data/predict_processed/clean_data_2017_2018.csv")
     features = load_feature_config()
 
     numeric_features = [f["name"] for f in features if f["type"] in ["numeric", "numerical"] and f["role"] == "feature"]
@@ -51,13 +51,13 @@ def summarize():
         if tick.get_text() in target_features:
             tick.set_fontweight("bold")
 
+    os.makedirs("../../figures/eda_predict", exist_ok=True)
     plt.tight_layout()
-    plt.savefig("../figures/eda/correlation_heatmap.png", dpi=300)
+    plt.savefig("../../figures/eda_predict/correlation_heatmap.png", dpi=300)
     plt.close()
-    print("Saved correlation heatmap to ../figures/eda/correlation_heatmap.png")
+    print("Saved correlation heatmap to ../../figures/eda_predict/correlation_heatmap.png")
 
     print("Generating histograms for numeric and categorical features...")
-    os.makedirs("../figures/eda", exist_ok=True)
     all_features = numeric_features + categorical_features
     n = len(all_features)
     ncols = 3
@@ -76,9 +76,9 @@ def summarize():
         fig.delaxes(axes[j])
     fig.suptitle("Feature Distributions", fontsize=14)
     plt.tight_layout(rect=[0, 0.03, 1, 0.97])
-    plt.savefig("../figures/eda/hist_all_features.png", dpi=300)
+    plt.savefig("../../figures/eda_predict/hist_all_features.png", dpi=300)
     plt.close()
-    print("Saved feature histograms to ../figures/eda/hist_all_features.png")
+    print("Saved feature histograms to ../../figures/eda_predict/hist_all_features.png")
 
     print("Generating histograms for targets...")
     n = len(target_features)
@@ -91,9 +91,9 @@ def summarize():
             axes[i].set_ylabel("Count")
     fig.suptitle("Target Distributions", fontsize=14)
     plt.tight_layout(rect=[0, 0.03, 1, 0.97])
-    plt.savefig("../figures/eda/hist_targets.png", dpi=300)
+    plt.savefig("../../figures/eda_predict/hist_targets.png", dpi=300)
     plt.close()
-    print("Saved target histograms to ../figures/eda/hist_targets.png")
+    print("Saved target histograms to ../../figures/eda_predict/hist_targets.png")
 
     print("Generating univariate linear regression plots...")
     r2_table = pd.DataFrame(index=numeric_features, columns=target_features, dtype=float)
@@ -147,9 +147,9 @@ def summarize():
         )
 
         fig.tight_layout(rect=[0, 0.05, 1, 1])
-        plt.savefig(f"../figures/eda/univariate_{target}.png", dpi=300)
+        plt.savefig(f"../../figures/eda_predict/univariate_{target}.png", dpi=300)
         plt.close()
-    print("Saved univariate regression plots to ../figures/eda/")
+    print("Saved univariate regression plots to ../../figures/eda_predict/")
 
     print("Generating boxplots for categorical features...")
     for target in target_features:
@@ -170,9 +170,9 @@ def summarize():
             fig.delaxes(axes[j])
         fig.suptitle(f"Categorical Features by {target}", fontsize=14)
         plt.tight_layout(rect=[0, 0.03, 1, 0.97])
-        plt.savefig(f"../figures/eda/boxplot_{target}.png", dpi=300)
+        plt.savefig(f"../../figures/eda_predict/boxplot_{target}.png", dpi=300)
         plt.close()
-        print(f"Saved boxplot for {target} to ../figures/eda/boxplot_{target}.png")
+        print(f"Saved boxplot for {target} to ../../figures/eda_predict/boxplot_{target}.png")
 
     print("Summary of cleaned dataset:")
     print(f"Categorical features in data: {[f for f in categorical_features if f in df.columns]}")
