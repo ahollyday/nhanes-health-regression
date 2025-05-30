@@ -33,36 +33,63 @@ for model_file in model_files:
     model_name = model_file.replace(".pkl", "").replace("_", " ").title()
     model = joblib.load(model_path)
 
-    if hasattr(model, "estimators_") and hasattr(model.estimators_[0], "feature_importances_"):
-        # === Get feature importances ===
+    mean_importances = None
+
+    # === XGBoost ===
+    if "xgboost" in model_name.lower() and hasattr(model, "get_booster"):
+        booster = model.get_booster()
+        score_dict = booster.get_score(importance_type="gain")
+        mean_importances = np.array([score_dict.get(f"f{i}", 0) for i in range(len(feature_names))])
+
+    # === Models with feature_importances_ ===
+    elif hasattr(model, "feature_importances_"):
+        mean_importances = model.feature_importances_
+
+    # === Models with estimators_ (e.g., MultiOutput models) ===
+    elif hasattr(model, "estimators_") and hasattr(model.estimators_[0], "feature_importances_"):
         all_importances = np.array([est.feature_importances_ for est in model.estimators_])
         mean_importances = np.mean(all_importances, axis=0)
 
-        # === Aggregate importances ===
-        grouped = collapse_onehot_feature_names(feature_names)
-        aggr_importances = {
-            k: mean_importances[[np.where(feature_names == f)[0][0] for f in v]].sum()
-            for k, v in grouped.items()
-        }
+    # === Linear models (e.g., LinearRegression) ===
+    elif hasattr(model, "coef_"):
+        coefs = np.abs(model.coef_)
+        if coefs.ndim == 1:
+            mean_importances = coefs
+        else:
+            mean_importances = np.mean(np.abs(coefs), axis=0)
 
-        # === Normalize to get relative importance
-        total_importance = sum(aggr_importances.values())
-        aggr_importances = {k: v / total_importance for k, v in aggr_importances.items()}
+    else:
+        print(f"Skipping {model_name}: No usable feature importances")
+        continue
 
-        # === Plot ===
-        importance_df = pd.DataFrame.from_dict(aggr_importances, orient="index", columns=["Importance"])
-        importance_df = importance_df.sort_values("Importance", ascending=False)
+    # === Aggregate importances ===
+    grouped = collapse_onehot_feature_names(feature_names)
+    aggr_importances = {
+        k: mean_importances[[np.where(feature_names == f)[0][0] for f in v]].sum()
+        for k, v in grouped.items()
+    }
 
-        plt.figure(figsize=(10, 6))
-        importance_df.plot(kind="barh", legend=False, color="steelblue")
-        plt.xlabel("Relative Importance (Sum = 1)")
-        plt.ylabel("Feature")
-        plt.title(f"Top Features – {model_name}")
-        plt.gca().invert_yaxis()
-        plt.tight_layout()
+    # === Normalize to get relative importance
+    total_importance = sum(aggr_importances.values())
+    if total_importance == 0:
+        print(f"Skipping {model_name}: All-zero feature importances")
+        continue
+    aggr_importances = {k: v / total_importance for k, v in aggr_importances.items()}
 
-        output_path = f"../figures/feature_importance/feature_importance_{model_file.replace('.pkl', '')}.png"
-        plt.savefig(output_path, dpi=300)
-        plt.close()
-        print(f"✅ Saved normalized feature importance plot to {output_path}")
+    # === Plot ===
+    importance_df = pd.DataFrame.from_dict(aggr_importances, orient="index", columns=["Importance"])
+    importance_df = importance_df.sort_values("Importance", ascending=False)
+
+    plt.figure(figsize=(10, 6))
+    importance_df.plot(kind="barh", legend=False, color="steelblue")
+    plt.xlabel("Relative Importance (Sum = 1)")
+    plt.ylabel("Feature")
+    plt.title(f"Top Features – {model_name}")
+    plt.gca().invert_yaxis()
+    plt.tight_layout()
+
+    output_path = f"../figures/feature_importance/feature_importance_{model_file.replace('.pkl', '')}.png"
+    plt.savefig(output_path, dpi=300)
+    plt.close()
+    print(f"✅ Saved normalized feature importance plot to {output_path}")
 
