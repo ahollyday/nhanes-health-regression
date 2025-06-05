@@ -1,116 +1,73 @@
-# NHANES Health Regression Pipeline
+# NHANES Health Regression Project
 
-This project builds a reproducible machine learning pipeline to model health outcomes from the NHANES dataset using multi-output regression. It includes automated data cleaning, feature engineering, model training, evaluation, and residual diagnostics.
-
----
-
-## 📁 Project Structure
-
-```
-├── data/
-│   ├── raw/                     # Original NHANES .xpt files
-│   ├── processed/               # Cleaned CSV + train/test arrays
-│   ├── input/                   # Optional: custom inputs for prediction
-│   └── config/
-│       └── features.yaml        # Feature metadata + modeling flags
-│
-├── models/                      # Saved trained models (.pkl)
-├── summaries/                   # Training/testing metrics & residuals
-├── figures/
-│   ├── eda/                     # Exploratory plots
-│   └── evaluation/              # Final evaluation plots
-│
-├── pipeline/
-│   ├── load_clean.py            # Merges + cleans NHANES raw data
-│   ├── summarize_data.py        # Summary stats, histograms, correlation
-│   ├── preprocess_model_data.py # Imputation, encoding, scaling, splitting
-│   ├── train_models.py          # Trains & tunes ML models + residuals
-│   ├── test_models.py           # Loads models, evaluates on test set
-│   ├── evaluate_models.py       # Aggregates plots & CV effect
-│   └── clean_project.py         # Safely deletes intermediate outputs
-```
+This project uses NHANES 2015–2018 data to train predictive models that estimate health biomarkers based on demographic, lifestyle, and lab features.
 
 ---
 
-## 🚀 Pipeline Overview
+## 📌 Objective
 
-Run each stage in order:
+To evaluate whether features like age, sex, diet, activity, and lab measurements can predict key health targets:
 
-```bash
-python load_clean.py
-python summarize_data.py
-python preprocess_model_data.py
-python train_models.py
-python test_models.py
-python evaluate_models.py
-```
+- **HDL cholesterol**
+- **Glycohemoglobin (A1C)**
+- **Triglycerides**
 
 ---
 
-## 🧼 Data Cleaning
+## 🔄 Pipeline Structure
 
-- Feature selection via `features.yaml`
-- Merging multiple NHANES .xpt files on `SEQN`
-- Renaming columns
-- Replacing special codes (e.g., 777, 999) with `NaN`
-- Dropping extrema (if flagged)
-- Dropping rows with missing targets
+Each step of the ML pipeline is modular and reproducible:
 
----
+1. **Load & Clean Data**  
+   `01_load_clean.py` — Merges datasets and removes missing/extreme values.
 
-## 📊 Models Trained
+2. **Summarize Dataset**  
+   `02_summarize_data.py` — Outputs descriptive statistics and histograms.
 
-Multi-output regressors:
-- **Linear Regression (baseline)**
-- Random Forest
-- Gradient Boosting
-- K-Nearest Neighbors
-- Support Vector Regression
+3. **Preprocessing**  
+   `03_preprocess_model_data.py` — Uses a `ColumnTransformer` to:
+   - Encode categorical variables
+   - Scale numerical features
+   - Impute missing values
 
----
+4. **Model Training**  
+   - `04_train_models_GridSearchCV.py`  
+   - `04_train_models_RandomizedSearchCV.py`  
+   - `04_train_models_optuna.py`  
+   Trains multiple regressors using CV and tuning:
+   - Random Forest, Gradient Boosting, XGBoost, Ridge, SVR, KNN
 
-## 📈 Outputs
+5. **Hyperparameter Visualization**  
+   `05_vis_hp_results.py` — Visualizes Optuna search progress and parameter influence.
 
-- `train_metrics.csv` / `test_metrics.csv`: R² / RMSE by model and target
-- `train_residuals.csv` / `test_residuals.csv`: Model residuals
-- `train_test_metrics_scatter.png`: Compare train/test generalization
-- `train_residuals_overlay.png`, `test_residuals_overlay.png`: Residual histograms
-- `cv_fold_analysis.png`: R² / RMSE vs CV folds
+6. **Testing & Prediction**  
+   `06_test_models.py`, `predict/` — Applies tuned models to test data.
 
----
-
-## ⚙️ Feature Configuration
-
-```yaml
-- name: triglycerides
-  source: LBXTR
-  file: TRIGLY_I
-  type: numeric
-  role: target
-  drop_extrema: true
-  log_transform: true
-  unit: mg/dL
-```
-
-Supports:
-- `drop_extrema`
-- `log_transform`
-- `unit`
-- `role: feature` or `target`
+7. **Evaluation & Reporting**  
+   `07_evaluate_models.py`, `08_feature_importance.py` — Generates:
+   - R², RMSE scores
+   - True vs. predicted plots
+   - Residual plots
+   - Feature importance charts
 
 ---
 
-## 🧼 Clean Intermediate Files
+## 📊 EDA Summary
 
-```bash
-python clean_project.py
-```
+Exploratory plots include:
+- Distribution histograms for all features and targets
+- Correlation heatmap to guide feature selection
+
+All EDA outputs are saved to `/figures/eda/`.
 
 ---
 
-## ✨ Author
+## ⚙️ Configuration
 
-Andrew Hollyday  
-Ph.D. in Geophysics, Columbia University
+Model features and targets are defined in `config/features.yaml`. Targets can be updated or log-transformed here. The pipeline uses YAML-based configs for flexibility.
 
-MIT License
+---
+
+## 📁 Directory Structure
+
+

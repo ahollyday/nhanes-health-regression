@@ -25,15 +25,6 @@ def load_feature_config(config_path):
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)["features"]
 
-def remove_min_max_extrema(df, features):
-    drop_cols = [f["name"] for f in features if f.get("drop_extrema", False)]
-    for col in drop_cols:
-        if col in df.columns:
-            min_val = df[col].min()
-            max_val = df[col].max()
-            df = df[(df[col] != min_val) & (df[col] != max_val)]
-    return df
-
 def apply_value_maps(df, features):
     for f in features:
         col = f["name"]
@@ -41,47 +32,81 @@ def apply_value_maps(df, features):
             df[col] = df[col].map(f["map"])
     return df
 
-def load_and_clean_nhanes_predict(year_suffix="J", output_filename="clean_data_2017_2018.csv"):
-    print(f"📅 Loading NHANES data for suffix: {year_suffix}")
+def remove_extrema_columnwise(df, col_name, lower=0.05, upper=0.95):
+    q_low = df[col_name].quantile(lower)
+    q_high = df[col_name].quantile(upper)
+    original_len = len(df)
+    df = df[(df[col_name] >= q_low) & (df[col_name] <= q_high)]
+    removed = original_len - len(df)
+    print(f"📉 Removed {removed} rows from '{col_name}' outside {int(lower*100)}th–{int(upper*100)}th percentiles")
+    return df
+
+def load_and_clean_nhanes_predict(year_suffix="H", output_filename="clean_data_2017_2018.csv"):
+    print(f"📅 Loading NHANES prediction data for suffix: {year_suffix}")
     config_path = "../../data/config/features.yaml"
     features = load_feature_config(config_path)
     file_list = sorted(set(f["file"] for f in features))
-    
-    data_dir = f"../../data/predict_raw"
+    print(f"📆 Files to load: {file_list}")
+
+    data_dir = "../../data/predict_raw"
     dfs = []
+
     for file_code in file_list:
-        file_with_suffix = f"{file_code.replace('_I', f'_{year_suffix}')}.xpt.txt"
-        path = os.path.join(data_dir, file_with_suffix)
+        filename = f"{file_code.replace('_I', f'_{year_suffix}')}.xpt.txt"
+        path = os.path.join(data_dir, filename)
         if not os.path.exists(path):
             print(f"⚠️ File not found: {path}")
             continue
+
         df, _ = pyreadstat.read_xport(path)
+        print(f"✅ Loaded {filename}: {df.shape[0]} rows, {df.shape[1]} columns")
+
+        cols_for_file = [f for f in features if f["file"] == file_code]
+        col_names = ["SEQN"] + [f["source"] for f in cols_for_file if f["source"] in df.columns]
+        df = df[col_names].copy()
+
+        rename_map = {f["source"]: f["name"] for f in cols_for_file}
+        df.rename(columns=rename_map, inplace=True)
+
+        for f in cols_for_file:
+            col = f["name"]
+            if col in df.columns and col in INVALID_VALUES:
+                df[col] = df[col].astype("Float64")
+                df[col] = df[col].replace(INVALID_VALUES[col], pd.NA)
+
+        for f in cols_for_file:
+            if f.get("drop_extrema", False) and f["name"] in df.columns:
+                df = remove_extrema_columnwise(df, f["name"])
+
+        df = apply_value_maps(df, cols_for_file)
+
         dfs.append(df)
 
     merged = reduce(lambda left, right: pd.merge(left, right, on="SEQN", how="outer"), dfs)
-    rename_map = {f["source"]: f["name"] for f in features}
-    keep_cols = ["SEQN"] + list(rename_map.keys())
-    subset = merged[keep_cols].copy()
-    df_clean = subset.rename(columns=rename_map)
-
-    for col, bad_values in INVALID_VALUES.items():
-        if col in df_clean.columns:
-            df_clean[col] = df_clean[col].astype("Float64")
-            df_clean[col] = df_clean[col].replace(bad_values, pd.NA)
-
-    df_clean = remove_min_max_extrema(df_clean, features)
-    df_clean = apply_value_maps(df_clean, features)
+    print(f"🔗 Merged dataframe shape: {merged.shape}")
 
     target_cols = [f["name"] for f in features if f["role"] == "target"]
-    df_clean = df_clean.dropna(subset=target_cols)
+    before = len(merged)
+    merged = merged.dropna(subset=target_cols)
+    after = len(merged)
+    print(f"🛋 Dropped {before - after} rows with missing target values: {target_cols}")
 
     output_path = f"../../data/predict_processed/{output_filename}"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    df_clean.to_csv(output_path, index=False)
-    print(f"✅ Saved cleaned data to {output_path}")
-    return df_clean
+    merged.to_csv(output_path, index=False)
+    print(f"✅ Saved cleaned prediction data to {output_path}")
+
+    # Optional summary
+    categorical = [f["name"] for f in features if f["type"] == "categorical"]
+    numerical = [f["name"] for f in features if f["type"] in ["numeric", "numerical"]]
+    print("\n🔎 Summary of cleaned prediction dataset:")
+    print(f"Categorical features: {categorical}")
+    print(f"Numerical features: {numerical}")
+    print(f"Target variables: {target_cols}")
+    print(f"Cleaned data shape: {merged.shape}")
+
+    return merged
 
 if __name__ == "__main__":
-    # This can be modified or turned into CLI later
     load_and_clean_nhanes_predict()
 

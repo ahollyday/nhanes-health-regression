@@ -84,7 +84,7 @@ features:
     source: LBDHDD
     file: HDL_I
     type: numeric
-    role: target
+    role: feature
     drop_extrema: true
     log_transform: false
     unit: mg/dL
@@ -180,7 +180,7 @@ features:
     source: DR1TSUGR
     file: DR1TOT_I
     type: numerical
-    role: feature
+    role: target
     drop_extrema: true
     log_transform: false
     unit: g
@@ -190,3 +190,102 @@ features:
     file: HIQ_I
     type: categorical
     role: feature
+
+  - name: acrylamide
+    source: LBXACR
+    file: AMDGYD_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: pmol/g Hb
+
+  - name: glycideamide
+    source: LBXGLY
+    file: AMDGYD_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: pmol/g Hb
+
+  - name: apolipoprotein
+    source: LBXAPB
+    file: APOB_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: mg/dL
+
+  - name: chlorotyrosine
+    source: SSCL1Y
+    file: SSCLTY_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: ng/mL
+
+  - name: total_cholesterol
+    source: LBXTC
+    file: TCHOL_I
+    type: numerical
+    role: target
+    drop_extrema: true
+    log_transform: true
+    unit: mg/dL
+
+  - name: chromium
+    source: LBXBCR
+    file: CRCO_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: ug/L
+
+  - name: cobalt
+    source: LBXBCO
+    file: CRCO_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: ug/L
+
+  - name: formaldehyde
+    source: LBXFOR
+    file: FORMAL_I
+    type: numerical 
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: nmol/g Hb 
+
+  - name: insulin
+    source: LBXIN
+    file: INS_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: true
+    unit: uU/mL
+
+  - name: strontium
+    source: URXUSR
+    file: UM_I
+    type: numerical
+    role: feature
+    drop_extreme: true
+    log_transform: false
+    unit: ug/L
+
+  - name: benzene
+    source: LBXVBZ
+    file: VOCWB_I
+    type: numerical
+    role: feature
+    drop_extrema: true
+    log_transform: false
+    unit: ng/mL 

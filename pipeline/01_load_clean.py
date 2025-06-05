@@ -4,7 +4,7 @@ import pyreadstat
 import yaml
 from functools import reduce
 
-# Define per-column invalid NHANES codes (after renaming)
+# Define invalid NHANES values (after renaming)
 INVALID_VALUES = {
     'drinks_per_day': [777, 999],
     'alc_freq_past12mo': [777, 999],
@@ -26,23 +26,20 @@ def load_feature_config(config_path):
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)["features"]
 
-def remove_min_max_extrema(df, features):
-    drop_cols = [f["name"] for f in features if f.get("drop_extrema", False)]
-    for col in drop_cols:
-        if col in df.columns:
-            min_val = df[col].min()
-            max_val = df[col].max()
-            before = len(df)
-            df = df[(df[col] != min_val) & (df[col] != max_val)]
-            after = len(df)
-            print(f"📉 Removed {before - after} rows from '{col}' equal to min ({min_val}) or max ({max_val})")
-    return df
-
 def apply_value_maps(df, features):
     for f in features:
         col = f["name"]
         if "map" in f and col in df.columns:
             df[col] = df[col].map(f["map"])
+    return df
+
+def remove_extrema_columnwise(df, col_name, lower=0.05, upper=0.95):
+    q_low = df[col_name].quantile(lower)
+    q_high = df[col_name].quantile(upper)
+    original_len = len(df)
+    df = df[(df[col_name] >= q_low) & (df[col_name] <= q_high)]
+    removed = original_len - len(df)
+    print(f"📉 Removed {removed} rows from '{col_name}' outside {int(lower*100)}th–{int(upper*100)}th percentiles")
     return df
 
 def load_and_clean_nhanes():
@@ -61,54 +58,56 @@ def load_and_clean_nhanes():
             continue
         df, _ = pyreadstat.read_xport(path)
         print(f"✅ Loaded {file_code}: {df.shape[0]} rows, {df.shape[1]} columns")
+
+        # Identify and keep relevant columns
+        cols_for_file = [f for f in features if f["file"] == file_code]
+        col_names = ["SEQN"] + [f["source"] for f in cols_for_file if f["source"] in df.columns]
+        df = df[col_names].copy()
+
+        # Rename columns
+        rename_map = {f["source"]: f["name"] for f in cols_for_file}
+        df.rename(columns=rename_map, inplace=True)
+
+        # Replace invalid values with NA
+        for f in cols_for_file:
+            col = f["name"]
+            if col in df.columns and col in INVALID_VALUES:
+                df[col] = df[col].astype("Float64")
+                df[col] = df[col].replace(INVALID_VALUES[col], pd.NA)
+
+        # Drop extreme values (column-wise)
+        for f in cols_for_file:
+            if f.get("drop_extrema", False) and f["name"] in df.columns:
+                df = remove_extrema_columnwise(df, f["name"])
+
+        # Apply value maps
+        df = apply_value_maps(df, cols_for_file)
+
         dfs.append(df)
 
     merged = reduce(lambda left, right: pd.merge(left, right, on="SEQN", how="outer"), dfs)
     print(f"🔗 Merged dataframe shape: {merged.shape}")
 
-    rename_map = {f["source"]: f["name"] for f in features}
-    keep_cols = ["SEQN"] + list(rename_map.keys())
-    try:
-        subset = merged[keep_cols].copy()
-    except KeyError as e:
-        missing = [col for col in keep_cols if col not in merged.columns]
-        print(f"❌ Missing columns in merged data: {missing}")
-        raise
-
-    df_clean = subset.rename(columns=rename_map)
-    print(f"🪜 Renamed columns: {list(df_clean.columns)}")
-
-    for col, bad_values in INVALID_VALUES.items():
-        if col in df_clean.columns:
-            try:
-                df_clean[col] = df_clean[col].astype("Float64")
-                df_clean[col] = df_clean[col].replace(bad_values, pd.NA)
-            except Exception as e:
-                print(f"⚠️ Skipping replacement for column {col} due to error: {e}")
-
-    df_clean = remove_min_max_extrema(df_clean, features)
-    df_clean = apply_value_maps(df_clean, features)
-
-    # Drop rows where any target is missing (required for multi-output regression)
+    # Drop rows with missing targets
     target_cols = [f["name"] for f in features if f["role"] == "target"]
-    before = len(df_clean)
-    df_clean = df_clean.dropna(subset=target_cols)
-    after = len(df_clean)
+    before = len(merged)
+    merged = merged.dropna(subset=target_cols)
+    after = len(merged)
     print(f"🛋 Dropped {before - after} rows with missing target values: {target_cols}")
 
     output_path = "../data/processed/clean_data.csv"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    df_clean.to_csv(output_path, index=False)
+    merged.to_csv(output_path, index=False)
     print(f"✅ Saved cleaned data to {output_path}")
 
-    # === Summary info ===
+    # Summary
     categorical = [f["name"] for f in features if f["type"] == "categorical"]
-    numerical = [f["name"] for f in features if f["type"] == "numeric" or f["type"] == "numerical"]
+    numerical = [f["name"] for f in features if f["type"] in ["numeric", "numerical"]]
     print("\n🔎 Summary of cleaned dataset:")
     print(f"Categorical features: {categorical}")
     print(f"Numerical features: {numerical}")
     print(f"Target variables: {target_cols}")
-    print(f"Cleaned data shape: {df_clean.shape}")
+    print(f"Cleaned data shape: {merged.shape}")
 
 if __name__ == "__main__":
     load_and_clean_nhanes()

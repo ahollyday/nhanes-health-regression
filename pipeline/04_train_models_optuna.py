@@ -18,9 +18,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # === Global config ===
-CV_FOLDS = 8
-N_TRIALS = 1000
-MAX_TIME = 10800 #(units: secs; e.g., 1800 = 30 mins)
+CV_FOLDS = 3
+N_TRIALS = 10 #500
+MAX_TIME = 60 #3600 # 10800 #(units: secs; e.g., 1800 = 30 mins)
 optuna_study_dir = "../optuna_studies"
 os.makedirs(optuna_study_dir, exist_ok=True)
 
@@ -128,11 +128,12 @@ with open("../models/best_models.txt", "w") as f:
 
     def objective_gb(trial):
         model = MultiOutputRegressor(GradientBoostingRegressor(
-            n_estimators=trial.suggest_int("n_estimators", 100, 1000),
-            learning_rate=trial.suggest_float("learning_rate", 0.001, 0.3),
+            n_estimators=trial.suggest_int("n_estimators", 50, 1500),
+            learning_rate=trial.suggest_float("learning_rate", 0.0001, 0.3),
             max_depth=trial.suggest_int("max_depth", 3, 10),
-            subsample=trial.suggest_float("subsample", 0.5, 1.0),
-            min_samples_leaf=trial.suggest_int("min_samples_leaf", 1, 10),
+            subsample=trial.suggest_float("subsample", 0.4, 1.0),
+            min_samples_leaf=trial.suggest_int("min_samples_leaf", 1, 50),
+            max_features=trial.suggest_categorical("max_features", ["sqrt", "log2", None]),
             random_state=42))
         return cross_val_score(model, X_train, y_train, cv=CV_FOLDS, scoring='r2').mean()
 
@@ -168,13 +169,15 @@ with open("../models/best_models.txt", "w") as f:
     def objective_xgb(trial):
         model = MultiOutputRegressor(XGBRegressor(
             objective='reg:squarederror',
-            n_estimators=trial.suggest_int("n_estimators", 100, 1000),
-            max_depth=trial.suggest_int("max_depth", 3, 15),
-            learning_rate=trial.suggest_float("learning_rate", 0.001, 0.3),
-            subsample=trial.suggest_float("subsample", 0.5, 1.0),
-            colsample_bytree=trial.suggest_float("colsample_bytree", 0.5, 1.0),
-            min_child_weight=trial.suggest_int("min_child_weight", 1, 10),
-            gamma=trial.suggest_float("gamma", 0, 5.0),
+            n_estimators=trial.suggest_int("n_estimators", 100, 1500),
+            max_depth=trial.suggest_int("max_depth", 3, 20),
+            learning_rate=trial.suggest_float("learning_rate", 0.0001, 0.3, log=True),
+            subsample=trial.suggest_float("subsample", 0.4, 1.0),
+            colsample_bytree=trial.suggest_float("colsample_bytree", 0.4, 1.0),
+            min_child_weight=trial.suggest_int("min_child_weight", 1, 20),
+            gamma=trial.suggest_float("gamma", 0, 10),
+            reg_alpha=trial.suggest_float("reg_alpha", 0.0, 10.0),
+            reg_lambda=trial.suggest_float("reg_lambda", 0.1, 10.0),
             random_state=42,
             n_jobs=1))
         return cross_val_score(model, X_train, y_train, cv=CV_FOLDS, scoring='r2').mean()

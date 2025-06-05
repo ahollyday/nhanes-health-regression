@@ -60,9 +60,23 @@ for (train_df, test_df, metric, ax) in [
     (rmse_train, rmse_test, "RMSE", axes[1])
 ]:
     models = train_df.index.tolist()
+    #merged = pd.DataFrame({
+    #    "Train": train_df.mean(axis=1).values,
+    #    "Test": test_df.mean(axis=1).values,
+    #    "Model": models
+    #})
+
+    # Normalize RMSE columns by their column-wise max
+    if metric == "RMSE":
+        train_df_norm = train_df / train_df.max(axis=0)
+        test_df_norm = test_df / test_df.max(axis=0)
+    else:
+        train_df_norm = train_df
+        test_df_norm = test_df    
+
     merged = pd.DataFrame({
-        "Train": train_df.mean(axis=1).values,
-        "Test": test_df.mean(axis=1).values,
+        "Train": train_df_norm.mean(axis=1).values,
+        "Test": test_df_norm.mean(axis=1).values,
         "Model": models
     })
 
@@ -80,6 +94,71 @@ axes[0].get_legend().remove()
 plt.tight_layout()
 os.makedirs("../figures/evaluation", exist_ok=True)
 plt.savefig("../figures/evaluation/train_test_metrics_comparison.png", dpi=300)
+
+# === Plot R^2 and RMSE comparison with per-target values ===
+sns.set(style="white")
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), dpi=300)
+
+for (train_df, test_df, metric, ax) in [
+    (r2_train, r2_test, "R^2", axes[0]),
+    (rmse_train, rmse_test, "RMSE", axes[1])
+]:
+    models = train_df.index.tolist()
+
+    if metric == "RMSE":
+        train_df_norm = train_df / train_df.max(axis=0)
+        test_df_norm = test_df / test_df.max(axis=0)
+    else:
+        train_df_norm = train_df
+        test_df_norm = test_df
+
+    # === Plot mean metrics ===
+    merged_mean = pd.DataFrame({
+        "Train": train_df_norm.mean(axis=1).values,
+        "Test": test_df_norm.mean(axis=1).values,
+        "Model": models,
+        "Target": "Mean"
+    })
+
+    # === Melt per-target values ===
+    # Clean up target names for plotting
+    clean_target_labels = {
+    t: target_display_names.get(t.replace("RMSE - ", "").replace("R2 - ", ""), t.replace("RMSE - ", "").replace("R2 - ", ""))
+    for t in train_df_norm.columns
+}
+
+
+    melted_train = train_df_norm.reset_index().melt(id_vars="Model", var_name="Target", value_name="Train")
+    melted_test = test_df_norm.reset_index().melt(id_vars="Model", var_name="Target", value_name="Test")
+
+    # Replace technical names with clean labels
+    melted_train["Target"] = melted_train["Target"].map(clean_target_labels)
+    melted_test["Target"] = melted_test["Target"].map(clean_target_labels)
+
+    #melted_train = train_df_norm.reset_index().melt(id_vars="Model", var_name="Target", value_name="Train")
+    #melted_test = test_df_norm.reset_index().melt(id_vars="Model", var_name="Target", value_name="Test")
+    merged_targets = pd.merge(melted_train, melted_test, on=["Model", "Target"])
+
+    # === Combine mean + target-level data ===
+    merged_all = pd.concat([merged_targets, merged_mean], axis=0)
+
+    # === Plot ===
+    sns.scatterplot(
+        data=merged_all, x="Train", y="Test", hue="Model", style="Target",
+        palette=model_colors, ax=ax, s=50, edgecolor='white'
+    )
+
+    min_val, max_val = merged_all[["Train", "Test"]].min().min(), merged_all[["Train", "Test"]].max().max()
+    ax.plot([min_val, max_val], [min_val, max_val], linestyle="--", color="gray")
+    ax.set_xlabel(f"Train {metric}")
+    ax.set_ylabel(f"Test {metric}")
+    ax.grid(False)
+
+axes[1].legend(title="", loc="upper left", bbox_to_anchor=(1.0, 1.0), frameon=False)
+axes[0].get_legend().remove()
+plt.tight_layout()
+os.makedirs("../figures/evaluation", exist_ok=True)
+plt.savefig("../figures/evaluation/train_test_metrics_comparison_targets.png", dpi=300)
 
 # === Residual overlay ===
 def plot_residual_overlay(df, split):
