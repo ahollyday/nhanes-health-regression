@@ -18,9 +18,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # === Global config ===
-CV_FOLDS = 3
-N_TRIALS = 10 #500
-MAX_TIME = 60 #3600 # 10800 #(units: secs; e.g., 1800 = 30 mins)
+CV_FOLDS = 10
+N_TRIALS = 1000 #500
+MAX_TIME = 10800 #(units: secs; e.g., 1800 = 30 mins)
 optuna_study_dir = "../optuna_studies"
 os.makedirs(optuna_study_dir, exist_ok=True)
 
