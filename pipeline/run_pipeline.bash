@@ -1,5 +1,15 @@
 #!/bin/bash
 
+set -e
+
+mkdir -p data/processed
+mkdir -p models
+mkdir -p summaries
+mkdir -p figures
+mkdir -p optuna_studies
+
+cd pipeline/
+
 echo "Starting full pipeline"
 
 echo "running 01_load_clean.py"

@@ -31,17 +31,19 @@ Each step of the ML pipeline is modular and reproducible:
    - Scale numerical features
    - Impute missing values
 
-4. **Model Training**  
-   - `04_train_models_GridSearchCV.py`  
-   - `04_train_models_RandomizedSearchCV.py`  
+4. **Model Training**
    - `04_train_models_optuna.py`  
+   - `04_train_models_GridSearchCV.py` (not yet complete)
+   - `04_train_models_RandomizedSearchCV.py` (not yet compelete)
+
+
    Trains multiple regressors using CV and tuning:
    - Random Forest, Gradient Boosting, XGBoost, SVR, KNN
    - A baseline MultiOutput Linear Regression model is also included for comparison
 
    These models span tree-based, linear, kernel-based, and distance-based techniques, offering a balance between flexibility and interpretability.
 
-   ### Model Types
+   #### Model Types
 
    The pipeline supports a diverse set of regression models, including:
 
@@ -60,16 +62,16 @@ Each step of the ML pipeline is modular and reproducible:
 
    These choices balance interpretability, non-linearity, and robustness, and can be tuned using either grid search, randomized search, or Optuna-based (recommended) optimization.
 
-5. **Hyperparameter Visualization**  
+6. **Hyperparameter Visualization**  
    `05_vis_hp_results.py` — Visualizes Optuna search progress and parameter influence:
    - Optimization history
    - Parallel coordinate plots
    - Relative hyperparameter importance
 
-6. **Testing & Prediction**  
+7. **Testing & Prediction**  
    `06_test_models.py`, `predict/` — Applies tuned models to unseen data and saves predicted outputs.
 
-7. **Evaluation & Reporting**  
+8. **Evaluation & Reporting**  
    `07_evaluate_models.py`, `08_feature_importance.py` — Generates:
    - R², RMSE scores (train/test)
    - Residual error distributions
@@ -164,8 +166,8 @@ nhanes-health-regression/
 │   ├── eda/                  # Correlation plots, histograms
 │   │   ├── boxplot_?.png     # Boxplots for cat. vars by target
 │   │   ├── corr_heat.png     # Linear correlations
-│   │   ├── hist_feat.png
-│   │   ├── hist_targ.png
+│   │   ├── hist_feat.png     # Feature distributions
+│   │   ├── hist_targ.png     # Target distributions
 │   │   └── univar_?.png      # R² of single-feature regressions
 │   │
 │   ├── evaluation/           # Model metrics, residuals, CV analysis
@@ -184,9 +186,10 @@ nhanes-health-regression/
 │   ├── 02_summarize_data_pred.py
 │   ├── 03_preprocess_pred.py
 │   ├── 04_predict.py
-│   ├── run_pred_pipeline.bash
-│   └── run_pipeline.bash
+│   └── run_pred_pipeline.bash
+│
 ├── summaries/                # R², RMSE scores and residuals per model
+│
 ├── pipeline/                 # All scripts (01–08) for end-to-end pipeline
 │   ├── 01_load_clean.py
 │   ├── 02_summarize_data.py
@@ -200,6 +203,24 @@ nhanes-health-regression/
 └── README.md                 # This file
 ```
 
+## Run with Docker
 
+Build and run the full pipeline in a reproducible containerized environment:
+
+```bash
+# Build the image
+docker build -t nhanes-regression .
+
+# Run the pipeline
+docker run -it nhanes-regression
+
+# (Optional) Save outputs locally
+docker run -it --rm \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/models:/app/models \
+  -v $(pwd)/summaries:/app/summaries \
+  -v $(pwd)/figures:/app/figures \
+  -v $(pwd)/optuna_studies:/app/optuna_studies \
+  nhanes-regression
 
 
