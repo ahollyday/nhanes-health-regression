@@ -122,23 +122,24 @@ Cross-validation folds and Optuna run time limits can be modified in the trainin
 ## How to Run
 
 1. **Install requirements**  
-   Install dependencies using `pip install -r requirements.txt` or with conda. Required packages include:
+   Install dependencies using `pip install -r requirements.txt` or with conda `conda install --file requirements.txt`. Required packages include:
+
    - pandas, scikit-learn, matplotlib, seaborn, joblib, optuna
 
-2. **Download NHANES Data**  
+3. **Download NHANES Data**  
    Place raw `.xpt.txt` files in the appropriate `data/raw/` and `data/predict_raw/` directories.
 
-3. **Configure features**  
+4. **Configure features**  
    Edit `data/config/features.yaml` to define variable roles, units, transforms, and thresholds.
 
-4. **Run training pipeline**  
+5. **Run training pipeline**  
    From the root directory, execute:
    ```bash
    bash run_pipeline.bash
    ```
    This will clean, preprocess, train, evaluate, and generate all outputs from `data/raw/`.
 
-5. **Run prediction on a new cycle**  
+6. **Run prediction on a new cycle**  
    To apply models to new survey data (e.g., 2013–2014), run:
    ```bash
    bash predict/run_pred_pipeline.bash
