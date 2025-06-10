@@ -54,7 +54,7 @@ def load_and_clean_nhanes():
     for file_code in file_list:
         path = os.path.join(data_dir, f"{file_code}.xpt.txt")
         if not os.path.exists(path):
-            print(f"⚠️ File not found: {path}")
+            print(f"File not found: {path}")
             continue
         df, _ = pyreadstat.read_xport(path)
         print(f" Loaded {file_code}: {df.shape[0]} rows, {df.shape[1]} columns")
