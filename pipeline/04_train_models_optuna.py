@@ -61,7 +61,7 @@ optuna_study_dir = "../optuna_studies"
 os.makedirs(optuna_study_dir, exist_ok=True)
 
 def run_study(model_name, objective_func):
-    print(f"🔍 Running Optuna for: {model_name}")
+    print(f" Running Optuna for: {model_name}")
     
     db_filename = f"optuna_{model_name.replace(' ', '_').lower()}.db"
     db_path = os.path.join(optuna_study_dir, db_filename)
@@ -73,7 +73,7 @@ def run_study(model_name, objective_func):
         load_if_exists=True
     )
     study.optimize(objective_func, n_trials=N_TRIALS, timeout=MAX_TIME)
-    print(f"✅ Best parameters for {model_name}: {study.best_params}")
+    print(f" Best parameters for {model_name}: {study.best_params}")
     return study.best_params
 
 def train_and_save(model_name, model):
@@ -102,11 +102,11 @@ def train_and_save(model_name, model):
 
     model_path = os.path.join(model_dir, f"{model_name.replace(' ', '_').lower()}.pkl")
     joblib.dump(model, model_path)
-    print(f"✅ Saved model to {model_path}")
+    print(f" Saved model to {model_path}")
     return model_path
 
 with open("../models/best_models.txt", "w") as f:
-    print("\n🚀 Training model: Linear Regression")
+    print("\n Training model: Linear Regression")
     linear_model = MultiOutputRegressor(LinearRegression())
     path = train_and_save("Linear Regression", linear_model)
     f.write(f"{os.path.basename(path)}\n")
@@ -189,8 +189,8 @@ with open("../models/best_models.txt", "w") as f:
 
 results_df = pd.DataFrame(results)
 results_df.to_csv("../summaries/train_metrics.csv", index=False)
-print("📊 Saved training metrics to ../summaries/train_metrics.csv")
+print(" Saved training metrics to ../summaries/train_metrics.csv")
 
 residuals_df = pd.concat(residuals, ignore_index=True)
 residuals_df.to_csv("../summaries/train_residuals.csv", index=False)
-print("📉 Saved training residuals to ../summaries/train_residuals.csv")
+print(" Saved training residuals to ../summaries/train_residuals.csv")

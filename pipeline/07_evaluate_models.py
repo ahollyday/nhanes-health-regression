@@ -242,5 +242,5 @@ axes[0].legend(title="Model", fontsize=8)
 
 plt.tight_layout()
 plt.savefig("../figures/evaluation/cv_fold_analysis.png", dpi=300)
-print("📊 Saved CV analysis plot to ../figures/evaluation/cv_fold_analysis.png")
+print(" Saved CV analysis plot to ../figures/evaluation/cv_fold_analysis.png")
 

@@ -37,13 +37,13 @@ residuals = []
 with open("../models/best_models.txt", "r") as f:
     model_files = [line.strip() for line in f if line.strip()]
 
-print(f"📦 Found {len(model_files)} models in best_models.txt:")
+print(f" Found {len(model_files)} models in best_models.txt:")
 for f in model_files:
     print(f"  - {f}")
 
 for filename in model_files:
     name = filename.replace("_", " ").replace(".pkl", "").title()
-    print(f"\n🔍 Evaluating model: {name}")
+    print(f"\n Evaluating model: {name}")
     model = joblib.load(os.path.join(model_dir, filename))
 
     y_pred = model.predict(X_test)
@@ -71,9 +71,9 @@ for filename in model_files:
 # === Save results ===
 results_df = pd.DataFrame(results)
 results_df.to_csv("../summaries/test_metrics.csv", index=False)
-print("📊 Saved test metrics to ../summaries/test_metrics.csv")
+print(" Saved test metrics to ../summaries/test_metrics.csv")
 
 residuals_df = pd.concat(residuals, ignore_index=True)
 residuals_df.to_csv("../summaries/test_residuals.csv", index=False)
-print("📉 Saved test residuals to ../summaries/test_residuals.csv")
+print(" Saved test residuals to ../summaries/test_residuals.csv")
 

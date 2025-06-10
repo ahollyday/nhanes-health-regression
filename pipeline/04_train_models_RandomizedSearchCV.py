@@ -106,7 +106,7 @@ os.makedirs(model_dir, exist_ok=True)
 
 with open("../models/best_models.txt", "w") as f:
     for name, spec in model_specs.items():
-        print(f"\n🚀 Training model: {name}")
+        print(f"\n Training model: {name}")
         model = spec["model"]
         params = spec.get("params")
 
@@ -131,7 +131,7 @@ with open("../models/best_models.txt", "w") as f:
             **{f"RMSE - {target_names[i]}": rmse[i] for i in range(len(target_names))}
         })
 
-        print(f"📈 Mean R² across targets: {np.mean(r2):.3f}")
+        print(f" Mean R² across targets: {np.mean(r2):.3f}")
 
         for i, target in enumerate(target_names):
             residuals.append(pd.DataFrame({
@@ -143,13 +143,13 @@ with open("../models/best_models.txt", "w") as f:
         model_path = os.path.join(model_dir, f"{name.replace(' ', '_').lower()}.pkl")
         joblib.dump(best_model, model_path)
         f.write(f"{os.path.basename(model_path)}\n")
-        print(f"✅ Saved model to {model_path}")
+        print(f" Saved model to {model_path}")
 
 # === Save results ===
 results_df = pd.DataFrame(results)
 results_df.to_csv("../summaries/train_metrics.csv", index=False)
-print("📊 Saved training metrics to ../summaries/train_metrics.csv")
+print(" Saved training metrics to ../summaries/train_metrics.csv")
 
 residuals_df = pd.concat(residuals, ignore_index=True)
 residuals_df.to_csv("../summaries/train_residuals.csv", index=False)
-print("📉 Saved training residuals to ../summaries/train_residuals.csv")
+print(" Saved training residuals to ../summaries/train_residuals.csv")

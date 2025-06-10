@@ -8,7 +8,7 @@ output_dir = "../figures/evaluation/optuna_visuals"
 os.makedirs(output_dir, exist_ok=True)
 
 for model in models:
-    print(f"📈 Generating visualizations for: {model}")
+    print(f" Generating visualizations for: {model}")
     study = optuna.load_study(
         study_name=model,
         storage=f"sqlite:///{os.path.join(study_dir, f'optuna_{model}.db')}"
@@ -18,5 +18,5 @@ for model in models:
     vis.plot_param_importances(study).write_image(f"{output_dir}/{model}_param_importance.png")
     vis.plot_parallel_coordinate(study).write_image(f"{output_dir}/{model}_parallel_coord.png")
 
-print("✅ All PNG plots saved to:", output_dir)
+print(" All PNG plots saved to:", output_dir)
 

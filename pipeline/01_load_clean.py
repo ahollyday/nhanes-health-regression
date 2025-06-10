@@ -39,15 +39,15 @@ def remove_extrema_columnwise(df, col_name, lower=0.05, upper=0.95):
     original_len = len(df)
     df = df[(df[col_name] >= q_low) & (df[col_name] <= q_high)]
     removed = original_len - len(df)
-    print(f"📉 Removed {removed} rows from '{col_name}' outside {int(lower*100)}th–{int(upper*100)}th percentiles")
+    print(f" Removed {removed} rows from '{col_name}' outside {int(lower*100)}th–{int(upper*100)}th percentiles")
     return df
 
 def load_and_clean_nhanes():
-    print("📅 Loading and merging NHANES files...")
+    print(" Loading and merging NHANES files...")
     config_path = "../data/config/features.yaml"
     features = load_feature_config(config_path)
     file_list = sorted(set(f["file"] for f in features))
-    print(f"📆 Files to load: {file_list}")
+    print(f" Files to load: {file_list}")
 
     data_dir = "../data/raw"
     dfs = []
@@ -57,7 +57,7 @@ def load_and_clean_nhanes():
             print(f"⚠️ File not found: {path}")
             continue
         df, _ = pyreadstat.read_xport(path)
-        print(f"✅ Loaded {file_code}: {df.shape[0]} rows, {df.shape[1]} columns")
+        print(f" Loaded {file_code}: {df.shape[0]} rows, {df.shape[1]} columns")
 
         # Identify and keep relevant columns
         cols_for_file = [f for f in features if f["file"] == file_code]
@@ -86,24 +86,24 @@ def load_and_clean_nhanes():
         dfs.append(df)
 
     merged = reduce(lambda left, right: pd.merge(left, right, on="SEQN", how="outer"), dfs)
-    print(f"🔗 Merged dataframe shape: {merged.shape}")
+    print(f" Merged dataframe shape: {merged.shape}")
 
     # Drop rows with missing targets
     target_cols = [f["name"] for f in features if f["role"] == "target"]
     before = len(merged)
     merged = merged.dropna(subset=target_cols)
     after = len(merged)
-    print(f"🛋 Dropped {before - after} rows with missing target values: {target_cols}")
+    print(f" Dropped {before - after} rows with missing target values: {target_cols}")
 
     output_path = "../data/processed/clean_data.csv"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     merged.to_csv(output_path, index=False)
-    print(f"✅ Saved cleaned data to {output_path}")
+    print(f" Saved cleaned data to {output_path}")
 
     # Summary
     categorical = [f["name"] for f in features if f["type"] == "categorical"]
     numerical = [f["name"] for f in features if f["type"] in ["numeric", "numerical"]]
-    print("\n🔎 Summary of cleaned dataset:")
+    print("\n Summary of cleaned dataset:")
     print(f"Categorical features: {categorical}")
     print(f"Numerical features: {numerical}")
     print(f"Target variables: {target_cols}")

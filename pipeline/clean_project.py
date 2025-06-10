@@ -27,7 +27,7 @@ def clean():
                 print(f"🗑️ Removed: {file_path}")
 
 if __name__ == "__main__":
-    print("🚿 Cleaning intermediate files...")
+    print(" Cleaning intermediate files...")
     clean()
-    print("✅ Done.")
+    print(" Done.")
 

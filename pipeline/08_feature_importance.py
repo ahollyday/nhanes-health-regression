@@ -46,7 +46,7 @@ for model_file in model_files:
 
     # === MultiOutput models – per-target plots
     if hasattr(model, "estimators_") and hasattr(model.estimators_[0], "feature_importances_"):
-        print(f"📊 Multi-target model detected: {model_name}")
+        print(f" Multi-target model detected: {model_name}")
         for i, est in enumerate(model.estimators_):
             target = target_names[i] if i < len(target_names) else f"target_{i}"
             fi = est.feature_importances_
@@ -56,7 +56,7 @@ for model_file in model_files:
             }
             total = sum(aggr.values())
             if total == 0:
-                print(f"⚠️ Skipping {model_name} – {target}: zero importances")
+                print(f"Skipping {model_name} – {target}: zero importances")
                 continue
             aggr = {k: v / total for k, v in aggr.items()}
 
@@ -74,7 +74,7 @@ for model_file in model_files:
             output_path = f"../figures/feature_importance/feature_importance_{model_file.replace('.pkl', '')}_{target}.png"
             plt.savefig(output_path, dpi=300)
             plt.close()
-            print(f"✅ Saved: {output_path}")
+            print(f" Saved: {output_path}")
         continue
 
     # === XGBoost ===
@@ -124,5 +124,5 @@ for model_file in model_files:
     output_path = f"../figures/feature_importance/feature_importance_{model_file.replace('.pkl', '')}.png"
     plt.savefig(output_path, dpi=300)
     plt.close()
-    print(f"✅ Saved: {output_path}")
+    print(f" Saved: {output_path}")
 
